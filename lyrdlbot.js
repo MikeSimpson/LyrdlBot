@@ -669,7 +669,7 @@ bot.on('chat', (username, message) => {
         else if (message.match(/.*status.*/i)) {
             bot.chat("I feel nothing!");
         }
-        else if (message.match(/.*help.*/i)) {
+        else if (false && message.match(/.*help.*/i)) {
             bot.chat("Lyrdl Bot commands:"
                 + "\nlb follow -> make me follow you (WIP - cannot go through doors)"
                 + "\nlb stop -> make me return to idle state"
@@ -680,7 +680,13 @@ bot.on('chat', (username, message) => {
                 + "\nlb dump -> make me dump all items in the nearest chest (untested)"
                 + "\nlb gunpowder -> send me on a mission to collect gunpowder (WIP)"
                 + "\nlb @ -> ask for my location"
-                + "\nlb status -> ask me how I'm feeling (WIP)")
+                + "\nlb status -> ask me how I'm feeling (WIP)"
+                + "\nOn the roadmap:"
+                + "\nAuto eating"
+                + "\nHandle doors"
+                + "\nAlphabetical item sorting"
+                + "\nActivate mob switch"
+                + "\nLLM interface")
         }
         else if (matchesMe) {
             bot.chat("You talking to me? Say 'lb help' for tips.")

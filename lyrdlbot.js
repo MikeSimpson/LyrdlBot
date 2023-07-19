@@ -14,6 +14,7 @@ const {
     BehaviorGetClosestEntity,
     NestedStateMachine } = require("mineflayer-statemachine");
 const Vec3 = require('vec3').Vec3;
+const mineflayerViewer = require('prismarine-viewer').mineflayer;
 
 // Auth options from command line arguments
 const options = {
@@ -68,7 +69,7 @@ const stateObjects = {
 
             // check for parked state and resume it
             if (stateMachine.parkedState) {
-                stateMachine.transition(parkedState)
+                stateMachine.transition(this.parkedState)
             }
 
             // Bob up and down to show state and keep from being kicked
@@ -313,6 +314,27 @@ const stateObjects = {
         }
     },
 
+    GoTo: {
+        enter: async function () {
+            console.log("Entered GoTo state with coords: " + this.extras.x + " " + this.extras.y + " " + this.extras.z);
+            bot.setControlState("jump", true)
+            await move(bot, new Vec3(this.extras.x, this.extras.y, this.extras.z), 0)
+        },
+        exit: async function () {
+            console.log("Exited GoTo state");
+            bot.setControlState("jump", false)
+            // TODO clear goal
+        },
+        extras: {
+            x: null,
+            y: null,
+            z: null
+        },
+        movingFinished: function () {
+            stateMachine.idle();
+        }
+    },
+
     // Collect and store gunpowder from farm
     Gunpowder: {
         enter: async function () {
@@ -346,6 +368,9 @@ const stateObjects = {
                     this.stateMachine.transition(this.states.JumpOffPlatform);
                     break;
                 case this.states.GoToChest:
+                    this.stateMachine.transition(this.states.GoToChest, { direction: 'North' });
+                    break;
+                case this.states.GoToChest:
                     this.stateMachine.transition(this.states.TakeFromChest, this.currentState.extras);
                     break;
                 case this.states.GoToPortal:
@@ -359,7 +384,7 @@ const stateObjects = {
                 enter: async function () {
                     console.log("Entered GunpowderStart state");
                     // Establish initial conditions, either accept them and navigate to starting point or inform user that I need to be relocated
-                    await move(bot, Vec3(111, 128, -21)) // TODO update coords after test
+                    await move(bot, new Vec3(111, 128, -21)) // TODO update coords after test
                 },
                 exit: async function () {
                     console.log("Exited GunpowderStart state");
@@ -369,7 +394,7 @@ const stateObjects = {
                 enter: async function () {
                     console.log("Entered FungustusHubToSpawn state");
                     // Move to portal coords
-                    await move(bot, Vec3(95, 129, -6))
+                    await move(bot, new Vec3(95, 129, -6))
                 },
                 exit: async function () {
                     console.log("Exited FungustusHubToSpawn state");
@@ -378,7 +403,7 @@ const stateObjects = {
             WaitForPortalToOverWorld: {
                 enter: async function () {
                     console.log("Entered WaitForPortalToOverWorld state");
-                    await bot.waitForTicks(300); // TODO test required ticks
+                    await bot.waitForTicks(100); // TODO test required ticks
                     stateObjects.Gunpowder.stateMachine.transition(stateObjects.Gunpowder.states.WaitForGunpowder)
                 },
                 exit: async function () {
@@ -389,15 +414,21 @@ const stateObjects = {
                 enter: async function () {
                     console.log("Entered WaitForGunpowder state");
                     this.sneak = false
+                    if (!this.extras) {
+                        this.extras = {
+                            ticksElapsed: 0
+                        }
+                    }
                     // wait for ticks 100 at a time and update ticksElapsed until 10000 has been reached
-                    const required = 1000; // TODO test
+                    const required = 200; // TODO test
                     const interval = 100;
-                    while (stateObjects.Gunpowder.stateMachine.currentState.name === this.name && this.extras.ticksElapsed < required) {
+                    while (stateObjects.Gunpowder.stateMachine.currentState === this && this.extras.ticksElapsed < required) {
                         bot.setControlState('sneak', this.sneak);
                         this.sneak = !this.sneak;
                         await bot.waitForTicks(interval);
                         this.extras.ticksElapsed += interval;
                     }
+                    stateObjects.Gunpowder.stateMachine.transition(stateObjects.Gunpowder.states.WalkToEdge)
                 },
                 exit: async function () {
                     console.log("Exited WaitForGunpowder state");
@@ -410,7 +441,7 @@ const stateObjects = {
                 enter: async function () {
                     console.log("Entered WalkToEdge state");
                     // Move to edge coords
-                    await move(bot, Vec3(760, 176, 25))
+                    await move(bot, new Vec3(760, 176, 25))
                 },
                 exit: async function () {
                     console.log("Exited WalkToEdge state");
@@ -420,15 +451,27 @@ const stateObjects = {
                 enter: async function () {
                     console.log("Entered JumpOffPlatform state");
                     // jump off the edge by walking forward
+                    bot.setControlState("sneak", false)
                     bot.setControlState("forward", true)
                     await bot.waitForTicks(5);
                     bot.setControlState("forward", false)
                     // wait until we hit the water?
                     await bot.waitForTicks(30); // TODO test timing
-                    stateObjects.Gunpowder.stateMachine.transition(stateObjects.Gunpowder.GoToChest, { direction: 'North' })
+                    stateObjects.Gunpowder.stateMachine.transition(stateObjects.Gunpowder.states.GoToCollection, { direction: 'North' })
                 },
                 exit: async function () {
                     console.log("Exited JumpOffPlatform state");
+                },
+            },
+            GoToCollection: {
+                enter: async function () {
+                    console.log("Entered GoToCollection state");
+                    bot.setControlState("jump", true)
+                    await move(bot, new Vec3(784, 65, 14), 0)
+                },
+                exit: async function () {
+                    console.log("Exited GoToCollection state");
+                    bot.setControlState("jump", false)
                 },
             },
             GoToChest: {
@@ -436,16 +479,16 @@ const stateObjects = {
                     console.log("Entered GoToChest state for direction: " + this.extras.direction);
                     switch (this.extras.direction) {
                         case 'North':
-                            await move(bot, Vec3(782, 64, 8))
+                            await move(bot, new Vec3(782, 64, 8))
                             break;
                         case 'East':
-                            await move(bot, Vec3(788, 64, 12))
+                            await move(bot, new Vec3(788, 64, 12))
                             break;
                         case 'South':
-                            await move(bot, Vec3(784, 64, 19))
+                            await move(bot, new Vec3(784, 64, 19))
                             break;
                         case 'West':
-                            await move(bot, Vec3(778, 64, 14))
+                            await move(bot, new Vec3(778, 64, 14))
                             break;
                     }
                 },
@@ -468,16 +511,16 @@ const stateObjects = {
                     // transition to next chest state
                     switch (this.extras.direction) {
                         case 'North':
-                            stateObjects.Gunpowder.stateMachine.transition(stateObjects.Gunpowder.GoToChest, { direction: 'East' })
+                            stateObjects.Gunpowder.stateMachine.transition(stateObjects.Gunpowder.states.GoToChest, { direction: 'East' })
                             break;
                         case 'East':
-                            stateObjects.Gunpowder.stateMachine.transition(stateObjects.Gunpowder.GoToChest, { direction: 'South' })
+                            stateObjects.Gunpowder.stateMachine.transition(stateObjects.Gunpowder.states.GoToChest, { direction: 'South' })
                             break;
                         case 'South':
-                            stateObjects.Gunpowder.stateMachine.transition(stateObjects.Gunpowder.GoToChest, { direction: 'West' })
+                            stateObjects.Gunpowder.stateMachine.transition(stateObjects.Gunpowder.states.GoToChest, { direction: 'West' })
                             break;
                         case 'West':
-                            stateObjects.Gunpowder.stateMachine.transition(stateObjects.Gunpowder.GoToPortal)
+                            stateObjects.Gunpowder.stateMachine.transition(stateObjects.Gunpowder.states.GoToPortal)
                             break;
                     }
                 },
@@ -492,7 +535,7 @@ const stateObjects = {
                 enter: async function () {
                     console.log("Entered GoToPortal state for direction: " + this.extras.direction);
                     // move to portal coords
-                    await move(bot, Vec3(766, 63, 13))
+                    await move(bot, new Vec3(766, 63, 13))
                 },
                 exit: async function () {
                     console.log("Exited GoToPortal state");
@@ -504,7 +547,7 @@ const stateObjects = {
             WaitForPortalToNether: {
                 enter: async function () {
                     console.log("Entered WaitForPortalToNether state");
-                    await bot.waitForTicks(300); // TODO test
+                    await bot.waitForTicks(100); // TODO test
                     stateObjects.Gunpowder.stateMachine.transition(stateObjects.Gunpowder.states.SpawnToFungustusHub)
                 },
                 exit: async function () {
@@ -515,7 +558,7 @@ const stateObjects = {
                 enter: async function () {
                     console.log("Entered SpawnToFungustusHub state");
                     // Move to fungustus hub chest coords
-                    await move(bot, Vec3(111, 128, -21)) // TODO update coords after testing
+                    await move(bot, new Vec3(111, 128, -21)) // TODO update coords after testing
                 },
                 exit: async function () {
                     console.log("Exited SpawnToFungustusHub state");
@@ -576,6 +619,7 @@ const stateObjects = {
 bot.once('spawn', () => {
     stateMachine.start(stateObjects.Idle);
     prompt();
+    mineflayerViewer(bot, { port: 3007, firstPerson: true });
 })
 
 // log errors and disconnections
@@ -634,6 +678,7 @@ bot.on('chat', (username, message) => {
             stateMachine.transition(stateObjects.Follow, { targetName: username });
         }
         else if (message.match(/.*stop.*/i)) {
+            stateMachine.parkedState = null;
             stateMachine.idle();
         }
         else if (message.match(/.*get in.*/i)) {
@@ -648,7 +693,7 @@ bot.on('chat', (username, message) => {
             stateMachine.transition(stateObjects.Sleep);
         }
         else if (message.match(/.*wake up.*/i)) {
-            if(stateMachine.currentState.shouldWake){
+            if (stateMachine.currentState.shouldWake) {
                 stateMachine.currentState.shouldWake();
             } else {
                 bot.chat("I'm not asleep!")
@@ -657,6 +702,10 @@ bot.on('chat', (username, message) => {
         else if (message.match(/.*step.*/i)) {
             const step = message.split("step ")[1]
             stateMachine.transition(stateObjects.Step, { direction: step });
+        }
+        else if (message.match(/.*go to.*/i)) {
+            const coords = message.split("go to ")[1].split(" ")
+            stateMachine.transition(stateObjects.GoTo, { x: coords[0], y: coords[1], z: coords[2] });
         }
         else if (message.match(/.*take.*/i)) {
             stateMachine.transition(stateObjects.Take);
@@ -722,14 +771,14 @@ const prompt = () => {
     })
 }
 
-async function move(bot, position) {
+async function move(bot, position, range) {
     const defaultMove = new Movements(bot)
     defaultMove.canDig = false
     defaultMove.allow1by1towers = false
 
     // Start following the target
     bot.pathfinder.setMovements(defaultMove)
-    bot.pathfinder.setGoal(new GoalNear(position.x, position.y, position.z, 1))
+    bot.pathfinder.setGoal(new GoalNear(position.x, position.y, position.z, range ?? 1))
 }
 
 async function takeAll(bot, chestBlock) {
@@ -737,7 +786,7 @@ async function takeAll(bot, chestBlock) {
     const window = await bot.openContainer(chestBlock)
 
     for (const item of window.containerItems()) {
-        withdrawItem(item, 1)
+        await withdrawItem(item, item.count)
     }
 
     window.close()
@@ -759,10 +808,10 @@ async function takeAll(bot, chestBlock) {
 // Put everything not in the hotbar into target chest
 async function putAll(bot, chest) {
 
-    const window = await bot.openContainer(chestBlock)
+    const window = await bot.openContainer(chest)
 
     for (const item of window.items()) {
-        depositItem(item, 1)
+        await depositItem(item, item.count)
     }
 
     window.close()

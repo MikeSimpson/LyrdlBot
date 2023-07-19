@@ -6,6 +6,8 @@ node lyrdlbot.js <SERVER_IP> <SERVER_PORT> <EMAIL_ADDRESS> <PASSWORD>
 - **lb stop** -> make me return to idle state
 - **lb get in** -> make me get in the nearest boat
 - **lb get out** -> make me get out of a boat
+- **lb step [forward|back|left|right]** -> make me take a step in the given direction
+- **lb go to x y z** -> make me head to the given coords
 - **lb sleep** -> make me sleep in the nearest bed
 - **lb take** -> make me take all items from the nearest chest (untested)
 - **lb dump** -> make me dump all items in the nearest chest (untested)
@@ -17,4 +19,5 @@ node lyrdlbot.js <SERVER_IP> <SERVER_PORT> <EMAIL_ADDRESS> <PASSWORD>
 - Handle doors
 - Alphabetical item sorting
 - Activate mob switch
+- Waypoints for go to command
 - LLM interface

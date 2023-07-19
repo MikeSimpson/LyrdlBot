@@ -648,7 +648,11 @@ bot.on('chat', (username, message) => {
             stateMachine.transition(stateObjects.Sleep);
         }
         else if (message.match(/.*wake up.*/i)) {
-            stateMachine.transition(stateObjects.WakeUp);
+            if(stateMachine.currentState.shouldWake){
+                stateMachine.currentState.shouldWake();
+            } else {
+                bot.chat("I'm not asleep!")
+            }
         }
         else if (message.match(/.*step.*/i)) {
             const step = message.split("step ")[1]

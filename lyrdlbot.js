@@ -359,7 +359,7 @@ const stateObjects = {
                 enter: async function () {
                     console.log("Entered GunpowderStart state");
                     // Establish initial conditions, either accept them and navigate to starting point or inform user that I need to be relocated
-                    await move(bot, Vec3(0, 0, 0)) // TODO coords
+                    await move(bot, Vec3(111, 128, -21)) // TODO update coords after test
                 },
                 exit: async function () {
                     console.log("Exited GunpowderStart state");
@@ -369,7 +369,7 @@ const stateObjects = {
                 enter: async function () {
                     console.log("Entered FungustusHubToSpawn state");
                     // Move to portal coords
-                    await move(bot, Vec3(0, 0, 0)) // TODO coords
+                    await move(bot, Vec3(95, 129, -6))
                 },
                 exit: async function () {
                     console.log("Exited FungustusHubToSpawn state");
@@ -390,7 +390,7 @@ const stateObjects = {
                     console.log("Entered WaitForGunpowder state");
                     this.sneak = false
                     // wait for ticks 100 at a time and update ticksElapsed until 10000 has been reached
-                    const required = 10000; // TODO test
+                    const required = 1000; // TODO test
                     const interval = 100;
                     while (stateObjects.Gunpowder.stateMachine.currentState.name === this.name && this.extras.ticksElapsed < required) {
                         bot.setControlState('sneak', this.sneak);
@@ -410,7 +410,7 @@ const stateObjects = {
                 enter: async function () {
                     console.log("Entered WalkToEdge state");
                     // Move to edge coords
-                    await move(bot, Vec3(0, 0, 0)) // TODO coords
+                    await move(bot, Vec3(760, 176, 25))
                 },
                 exit: async function () {
                     console.log("Exited WalkToEdge state");
@@ -436,16 +436,16 @@ const stateObjects = {
                     console.log("Entered GoToChest state for direction: " + this.extras.direction);
                     switch (this.extras.direction) {
                         case 'North':
-                            await move(bot, Vec3(0, 0, 0)) // TODO coords
+                            await move(bot, Vec3(782, 64, 8))
                             break;
                         case 'East':
-                            await move(bot, Vec3(0, 0, 0)) // TODO coords
+                            await move(bot, Vec3(788, 64, 12))
                             break;
                         case 'South':
-                            await move(bot, Vec3(0, 0, 0)) // TODO coords
+                            await move(bot, Vec3(784, 64, 19))
                             break;
                         case 'West':
-                            await move(bot, Vec3(0, 0, 0)) // TODO coords
+                            await move(bot, Vec3(778, 64, 14))
                             break;
                     }
                 },
@@ -492,7 +492,7 @@ const stateObjects = {
                 enter: async function () {
                     console.log("Entered GoToPortal state for direction: " + this.extras.direction);
                     // move to portal coords
-                    await move(bot, Vec3(0, 0, 0)) // TODO coords
+                    await move(bot, Vec3(766, 63, 13))
                 },
                 exit: async function () {
                     console.log("Exited GoToPortal state");
@@ -515,7 +515,7 @@ const stateObjects = {
                 enter: async function () {
                     console.log("Entered SpawnToFungustusHub state");
                     // Move to fungustus hub chest coords
-                    await move(bot, Vec3(0, 0, 0)) // TODO coords
+                    await move(bot, Vec3(111, 128, -21)) // TODO update coords after testing
                 },
                 exit: async function () {
                     console.log("Exited SpawnToFungustusHub state");

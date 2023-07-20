@@ -15,6 +15,7 @@ const {
     NestedStateMachine } = require("mineflayer-statemachine");
 const Vec3 = require('vec3').Vec3;
 const mineflayerViewer = require('prismarine-viewer').mineflayer;
+const autoeat = require('mineflayer-auto-eat').plugin;
 
 // Auth options from command line arguments
 const options = {
@@ -31,6 +32,7 @@ const bot = mineflayer.createBot(options);
 
 bot.loadPlugin(pathfinder);
 bot.loadPlugin(require('mineflayer-pathfinder').pathfinder);
+bot.loadPlugin(autoeat);
 
 // A class to hold the current state and handle state transitions
 class StateMachine {
@@ -46,8 +48,8 @@ class StateMachine {
         await this.currentState.enter();
     }
 
-    async idle() {
-        this.transition(stateObjects.Idle)
+    async idle(abort) {
+        this.transition(stateObjects.Idle, { abort: abort ?? false })
     }
 
     async resume() {
@@ -67,8 +69,11 @@ const stateObjects = {
         enter: async function () {
             console.log("Entered Idle state");
 
+            if(this.extras.abort){
+                stateMachine.parkedState = null;
+            }
             // check for parked state and resume it
-            if (stateMachine.parkedState) {
+            if (stateMachine.parkedState != null) {
                 stateMachine.transition(this.parkedState)
             }
 
@@ -84,6 +89,9 @@ const stateObjects = {
             console.log("Exited Idle state");
             bot.setControlState('sneak', false)
         },
+        extras: {
+            abort: false
+        }
     },
 
     Follow: {
@@ -134,7 +142,11 @@ const stateObjects = {
                     console.log("Entered Moving state");
                     const targetName = stateObjects.Follow.extras.targetName
                     const target = (targetName && bot.players[targetName]) ? bot.players[targetName].entity : null
-                    await move(bot, target.position)
+                    if (!target) {
+                        await stateObjects.Follow.stateMachine.transition(stateObjects.Follow.states.FollowLost);
+                    } else {
+                        await move(bot, target.position)
+                    }
                 },
                 exit: async function () {
                     console.log("Exited Moving state");
@@ -345,7 +357,7 @@ const stateObjects = {
             console.log("Exited Gunpowder state");
             this.stateMachine.currentState.exit();
             // Store state for recovery if interrupted
-            stateMachine.parkedState = this
+            // stateMachine.parkedState = this;
         },
         resume: async function () {
             console.log("Resumed Gunpowder state");
@@ -367,14 +379,17 @@ const stateObjects = {
                 case this.states.WalkToEdge:
                     this.stateMachine.transition(this.states.JumpOffPlatform);
                     break;
-                case this.states.GoToChest:
+                case this.states.GoToCollection:
                     this.stateMachine.transition(this.states.GoToChest, { direction: 'North' });
                     break;
                 case this.states.GoToChest:
-                    this.stateMachine.transition(this.states.TakeFromChest, this.currentState.extras);
+                    this.stateMachine.transition(this.states.TakeFromChest, this.stateMachine.currentState.extras);
                     break;
                 case this.states.GoToPortal:
                     this.stateMachine.transition(this.states.WaitForPortalToNether);
+                    break;
+                case this.states.SpawnToFungustusHub:
+                    this.stateMachine.transition(this.states.PutInChest);
                     break;
             }
         },
@@ -384,7 +399,7 @@ const stateObjects = {
                 enter: async function () {
                     console.log("Entered GunpowderStart state");
                     // Establish initial conditions, either accept them and navigate to starting point or inform user that I need to be relocated
-                    await move(bot, new Vec3(111, 128, -21)) // TODO update coords after test
+                    await move(bot, new Vec3(730, 129, -3292))
                 },
                 exit: async function () {
                     console.log("Exited GunpowderStart state");
@@ -403,7 +418,7 @@ const stateObjects = {
             WaitForPortalToOverWorld: {
                 enter: async function () {
                     console.log("Entered WaitForPortalToOverWorld state");
-                    await bot.waitForTicks(100); // TODO test required ticks
+                    await bot.waitForTicks(100);
                     stateObjects.Gunpowder.stateMachine.transition(stateObjects.Gunpowder.states.WaitForGunpowder)
                 },
                 exit: async function () {
@@ -420,7 +435,7 @@ const stateObjects = {
                         }
                     }
                     // wait for ticks 100 at a time and update ticksElapsed until 10000 has been reached
-                    const required = 200; // TODO test
+                    const required = 100000; // TODO test
                     const interval = 100;
                     while (stateObjects.Gunpowder.stateMachine.currentState === this && this.extras.ticksElapsed < required) {
                         bot.setControlState('sneak', this.sneak);
@@ -467,7 +482,7 @@ const stateObjects = {
                 enter: async function () {
                     console.log("Entered GoToCollection state");
                     bot.setControlState("jump", true)
-                    await move(bot, new Vec3(784, 65, 14), 0)
+                    await move(bot, new Vec3(784, 64, 14))
                 },
                 exit: async function () {
                     console.log("Exited GoToCollection state");
@@ -533,7 +548,7 @@ const stateObjects = {
             },
             GoToPortal: {
                 enter: async function () {
-                    console.log("Entered GoToPortal state for direction: " + this.extras.direction);
+                    console.log("Entered GoToPortal state");
                     // move to portal coords
                     await move(bot, new Vec3(766, 63, 13))
                 },
@@ -547,7 +562,7 @@ const stateObjects = {
             WaitForPortalToNether: {
                 enter: async function () {
                     console.log("Entered WaitForPortalToNether state");
-                    await bot.waitForTicks(100); // TODO test
+                    await bot.waitForTicks(100);
                     stateObjects.Gunpowder.stateMachine.transition(stateObjects.Gunpowder.states.SpawnToFungustusHub)
                 },
                 exit: async function () {
@@ -558,7 +573,7 @@ const stateObjects = {
                 enter: async function () {
                     console.log("Entered SpawnToFungustusHub state");
                     // Move to fungustus hub chest coords
-                    await move(bot, new Vec3(111, 128, -21)) // TODO update coords after testing
+                    await move(bot, new Vec3(730, 129, -3292))
                 },
                 exit: async function () {
                     console.log("Exited SpawnToFungustusHub state");
@@ -572,7 +587,7 @@ const stateObjects = {
                         matching: bot.registry.blocksByName['chest'].id,
                         maxDistance: 6
                     })
-                    await putAll(bot, chest);
+                    await putAll(bot, chest, 'gunpowder');
                     // Back to start state
                     stateObjects.Gunpowder.stateMachine.transition(stateObjects.Gunpowder.states.GunpowderStart);
                 },
@@ -620,6 +635,25 @@ bot.once('spawn', () => {
     stateMachine.start(stateObjects.Idle);
     prompt();
     mineflayerViewer(bot, { port: 3007, firstPerson: true });
+    bot.autoEat.options = {
+        priority: 'foodPoints',
+        startAt: 14,
+        bannedFood: []
+    }
+})
+
+bot.on('autoeat_started', () => {
+    console.log('Auto Eat started!')
+})
+
+bot.on('autoeat_stopped', () => {
+    console.log('Auto Eat stopped!')
+})
+
+bot.on('health', () => {
+    if (bot.food === 20) bot.autoEat.disable()
+    // Disable the plugin if the bot is at 20 food points
+    else bot.autoEat.enable() // Else enable the plugin again
 })
 
 // log errors and disconnections
@@ -678,8 +712,7 @@ bot.on('chat', (username, message) => {
             stateMachine.transition(stateObjects.Follow, { targetName: username });
         }
         else if (message.match(/.*stop.*/i)) {
-            stateMachine.parkedState = null;
-            stateMachine.idle();
+            stateMachine.idle(true);
         }
         else if (message.match(/.*get in.*/i)) {
             stateMachine.transition(stateObjects.Ride);
@@ -690,7 +723,7 @@ bot.on('chat', (username, message) => {
             }
         }
         else if (matchesSleep) {
-            stateMachine.transition(stateObjects.Sleep);
+            //stateMachine.transition(stateObjects.Sleep);
         }
         else if (message.match(/.*wake up.*/i)) {
             if (stateMachine.currentState.shouldWake) {
@@ -806,12 +839,14 @@ async function takeAll(bot, chestBlock) {
 }
 
 // Put everything not in the hotbar into target chest
-async function putAll(bot, chest) {
+async function putAll(bot, chest, itemName) {
 
     const window = await bot.openContainer(chest)
 
     for (const item of window.items()) {
-        await depositItem(item, item.count)
+        if(!itemName || item.name == itemName){
+            await depositItem(item, item.count)
+        }
     }
 
     window.close()

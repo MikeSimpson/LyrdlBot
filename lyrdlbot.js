@@ -71,6 +71,7 @@ function createBot() {
 
     const stateObjects = {
         Idle: {
+            description: function () { return "chill" },
             enter: async function () {
                 console.log("Entered Idle state");
 
@@ -97,6 +98,7 @@ function createBot() {
         },
 
         Follow: {
+            description: function () { return "follow " + this.extras.targetName },
             enter: async function () {
                 console.log("Entered Follow state with target: " + this.extras.targetName);
                 bot.chat("I will follow!");
@@ -152,6 +154,7 @@ function createBot() {
                     },
                     exit: async function () {
                         console.log("Exited Moving state");
+                        bot.pathfinder.stop();
                     },
                 },
                 FollowLost: {
@@ -178,6 +181,7 @@ function createBot() {
         },
 
         Ride: {
+            description: function () { return "ride a boat" },
             enter: async function () {
                 console.log("Entered Ride state");
                 this.stateMachine.start(this.states.RideStart);
@@ -244,6 +248,7 @@ function createBot() {
         },
 
         Sleep: {
+            description: function () { return "sleep" },
             enter: async function () {
                 console.log("Entered Sleep state");
                 this.stateMachine.start(this.states.SleepStart);
@@ -313,6 +318,7 @@ function createBot() {
         },
 
         Step: {
+            description: function () { return "step " + this.extras.direction },
             enter: async function () {
                 console.log("Entered Step state with direction: " + this.extras.direction);
                 // Set a key, wait a bit, and release it
@@ -330,6 +336,7 @@ function createBot() {
         },
 
         GoTo: {
+            description: function () { return "go to " + this.extras.x + " " + this.extras.y + " " + this.extras.z },
             enter: async function () {
                 console.log("Entered GoTo state with coords: " + this.extras.x + " " + this.extras.y + " " + this.extras.z);
                 bot.setControlState("jump", true)
@@ -353,6 +360,7 @@ function createBot() {
 
         // Collect and store gunpowder from farm
         Gunpowder: {
+            description: function () { return "collect gunpowder, I am currently " + this.stateMachine.currentState().description() },
             enter: async function () {
                 console.log("Entered Gunpowder state");
                 this.stateMachine.start(this.states.GunpowderStart);
@@ -396,6 +404,7 @@ function createBot() {
             stateMachine: new StateMachine(),
             states: {
                 GunpowderStart: {
+                    description: function () { return "getting ready" },
                     enter: async function () {
                         console.log("Entered GunpowderStart state");
                         // Establish initial conditions, either accept them and navigate to starting point or inform user that I need to be relocated
@@ -403,7 +412,7 @@ function createBot() {
                             bot.chat("I need to be in the nether to start this mission!");
                             idle(true);
                         } else {
-                            this.stateMachine.transition(this.states.FungustusHubToSpawn);
+                            stateObjects.Gunpowder.stateMachine.transition(stateObjects.Gunpowder.states.FungustusHubToSpawn);
                         }
                     },
                     exit: async function () {
@@ -412,6 +421,7 @@ function createBot() {
                     },
                 },
                 FungustusHubToSpawn: {
+                    description: function () { return "heading to the gunpowder farm" },
                     enter: async function () {
                         console.log("Entered FungustusHubToSpawn state");
                         // Move to portal coords
@@ -423,6 +433,7 @@ function createBot() {
                     },
                 },
                 WaitForPortalToOverWorld: {
+                    description: function () { return "going through the portal to the farm" },
                     enter: async function () {
                         console.log("Entered WaitForPortalToOverWorld state");
                         await bot.waitForTicks(100);
@@ -433,6 +444,7 @@ function createBot() {
                     },
                 },
                 WaitForGunpowder: {
+                    description: function () { return "waiting for the gunpowder" },
                     enter: async function () {
                         console.log("Entered WaitForGunpowder state");
                         this.sneak = false
@@ -442,7 +454,7 @@ function createBot() {
                             }
                         }
                         // wait for ticks 100 at a time and update ticksElapsed until 10000 has been reached
-                        const required = 100000; // TODO test
+                        const required = 30000; // TODO test
                         const interval = 100;
                         while (stateObjects.Gunpowder.stateMachine.currentState() === this && this.extras.ticksElapsed < required) {
                             bot.setControlState('sneak', this.sneak);
@@ -460,6 +472,7 @@ function createBot() {
                     }
                 },
                 WalkToEdge: {
+                    description: function () { return "jumping off the platform" },
                     enter: async function () {
                         console.log("Entered WalkToEdge state");
                         // Move to edge coords
@@ -471,6 +484,7 @@ function createBot() {
                     },
                 },
                 JumpOffPlatform: {
+                    description: function () { return "falling" },
                     enter: async function () {
                         console.log("Entered JumpOffPlatform state");
                         // jump off the edge by walking forward
@@ -487,6 +501,7 @@ function createBot() {
                     },
                 },
                 GoToCollection: {
+                    description: function () { return "swimming" },
                     enter: async function () {
                         console.log("Entered GoToCollection state");
                         bot.setControlState("jump", true)
@@ -499,6 +514,7 @@ function createBot() {
                     },
                 },
                 GoToChest: {
+                    description: function () { return "going to the " + this.extras.direction + " chest" },
                     enter: async function () {
                         console.log("Entered GoToChest state for direction: " + this.extras.direction);
                         switch (this.extras.direction) {
@@ -525,6 +541,7 @@ function createBot() {
                     }
                 },
                 TakeFromChest: {
+                    description: function () { return "taking gunpowder from the " + this.extras.direction + " chest" },
                     enter: async function () {
                         console.log("Entered TakeFromChest state for direction: " + this.extras.direction);
                         // take from chest
@@ -556,7 +573,8 @@ function createBot() {
                         direction: null
                     }
                 },
-                GoToPortal: {
+                GoToPortal: {                   
+                     description: function () { return "heading back to the nether" },
                     enter: async function () {
                         console.log("Entered GoToPortal state");
                         // move to portal coords
@@ -570,7 +588,8 @@ function createBot() {
                         direction: null
                     }
                 },
-                WaitForPortalToNether: {
+                WaitForPortalToNether: {                    
+                    description: function () { return "going through the portal to the nether" },
                     enter: async function () {
                         console.log("Entered WaitForPortalToNether state");
                         await bot.waitForTicks(100);
@@ -581,6 +600,7 @@ function createBot() {
                     },
                 },
                 SpawnToFungustusHub: {
+                    description: function () { return "walking to Fungustus with my cargo" },
                     enter: async function () {
                         console.log("Entered SpawnToFungustusHub state");
                         // Move to fungustus hub chest coords
@@ -592,6 +612,7 @@ function createBot() {
                     },
                 },
                 PutInChest: {
+                    description: function () { return "dropping off the cargo" },
                     enter: async function () {
                         console.log("Entered PutInChest");
                         // put gunpowder in chest
@@ -611,6 +632,7 @@ function createBot() {
         },
 
         Take: {
+            description: function () { return "take items from a chest" },
             enter: async function () {
                 console.log("Entered Take");
                 // take all items from nearest chest
@@ -627,6 +649,7 @@ function createBot() {
         },
 
         Dump: {
+            description: function () { return "dump items in a chest" },
             enter: async function () {
                 console.log("Entered Dump");
                 // put all items in nearest chest
@@ -777,6 +800,9 @@ function createBot() {
             else if (message.match(/.*gunpowder.*/i)) {
                 stateMachine.transition(stateObjects.Gunpowder);
             }
+            else if (message.match(/.*up2.*/i)) {
+                bot.chat("My current task is to " + stateMachine.currentState().description())
+            }
             else if (message.match(/.*@.*/i)) {
                 const p = bot.entity.position;
                 bot.chat("I'm at " + Math.round(p.x) + " " + Math.round(p.y) + " " + Math.round(p.z) + " in the " + bot.game.dimension.replace("the_", ""));
@@ -831,7 +857,9 @@ lb take -> make me take all items from the nearest chest
 lb dump -> make me dump all items in the nearest chest
 lb gunpowder -> send me on a mission to collect gunpowder
 lb @ -> ask for my location
-lb status -> ask me how I'm feeling (WIP)`
+lb up2 -> ask for my current task
+lb status -> ask me how I'm feeling (WIP)
+lb go die in a hole -> ask me to attempt to punch a hole straight down until I die (WIP)`
                     const lines = text.split("\n")
                     for (var i = 0; i < lines.length; i++) {
                         bot.chat(lines[i]);
@@ -898,6 +926,7 @@ async function move(bot, position, range) {
     const defaultMove = new Movements(bot)
     defaultMove.canDig = false
     defaultMove.allow1by1towers = false
+    defaultMove.allowFreeMotion = true
 
     // Start following the target
     bot.pathfinder.setMovements(defaultMove)

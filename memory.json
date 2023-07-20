@@ -4,19 +4,15 @@
             "x": 766,
             "y": 63,
             "z": 13,
-            "d": "overworld"
-        },
-        "origin": {
-            "x": "0",
-            "y": "0",
-            "z": "0",
-            "d": "overworld"
+            "d": "overworld",
+            "description" : "The overworld side portal for the gunpowder farm"
         },
         "gun_p_n": {
             "x": "95",
             "y": "129",
             "z": "-6",
-            "d": "the_nether"
+            "d": "the_nether",
+            "description" : "The nether side portal for the gunpowder farm"
         }
     }
 }

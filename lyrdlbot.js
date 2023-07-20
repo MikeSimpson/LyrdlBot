@@ -5,17 +5,46 @@ const { GoalNear } = require('mineflayer-pathfinder').goals;
 const fileStream = require('fs');
 const { defaultMaxListeners } = require('events');
 const Entity = require("prismarine-entity");
-const {
-    StateTransition,
-    BotStateMachine,
-    EntityFilters,
-    BehaviorFollowEntity,
-    BehaviorLookAtEntity,
-    BehaviorGetClosestEntity,
-    NestedStateMachine } = require("mineflayer-statemachine");
 const Vec3 = require('vec3').Vec3;
 const mineflayerViewer = require('prismarine-viewer').mineflayer;
 const autoeat = require('mineflayer-auto-eat').plugin;
+
+// A class to hold the current state and handle state transitions
+class StateMachine {
+
+    constructor() {
+        this.stateStack = [];
+    }
+
+    currentState() {
+        return this.stateStack[this.stateStack.length - 1]
+    }
+
+    async start(initialState) {
+        this.stateStack.push(initialState);
+        await this.currentState().enter();
+    }
+
+    async transition(newState, extras, replace) {
+        await this.currentState().exit();
+        if (replace ?? !this.currentState().pausable) {
+            this.stateStack.pop();
+        }
+        newState.extras = extras;
+        this.stateStack.push(newState);
+        await this.currentState().enter();
+    }
+
+    async pop() {
+        await this.currentState().exit();
+        this.stateStack.pop();
+        if (this.currentState().resume) {
+            this.currentState().resume();
+        } else {
+            this.currentState().enter();
+        }
+    }
+}
 
 // Auth options from command line arguments
 const options = {
@@ -34,32 +63,8 @@ bot.loadPlugin(pathfinder);
 bot.loadPlugin(require('mineflayer-pathfinder').pathfinder);
 bot.loadPlugin(autoeat);
 
-// A class to hold the current state and handle state transitions
-class StateMachine {
-    async start(initialState) {
-        this.currentState = initialState;
-        await this.currentState.enter();
-    }
-
-    async transition(newState, extras) {
-        await this.currentState.exit();
-        this.currentState = newState;
-        this.currentState.extras = extras;
-        await this.currentState.enter();
-    }
-
-    async idle(abort) {
-        this.transition(stateObjects.Idle, { abort: abort ?? false })
-    }
-
-    async resume() {
-        await this.currentState.exit();
-        this.currentState = this.parkedState;
-        this.parkedState = null;
-        if (this.currentState.resume) {
-            await this.currentState.resume();
-        }
-    }
+async function idle(replace) {
+    stateMachine.transition(stateObjects.Idle, {}, replace)
 }
 
 const stateMachine = new StateMachine()
@@ -69,17 +74,14 @@ const stateObjects = {
         enter: async function () {
             console.log("Entered Idle state");
 
-            if(this.extras.abort){
-                stateMachine.parkedState = null;
-            }
-            // check for parked state and resume it
-            if (stateMachine.parkedState != null) {
-                stateMachine.transition(this.parkedState)
+            // check for previous state and resume it
+            if (stateMachine.stateStack.length > 1) {
+                stateMachine.pop()
             }
 
             // Bob up and down to show state and keep from being kicked
             this.sneak = false
-            while (stateMachine.currentState === this) {
+            while (stateMachine.currentState() === this) {
                 bot.setControlState('sneak', this.sneak)
                 this.sneak = !this.sneak
                 await bot.waitForTicks(this.sneak ? 30 : 5)
@@ -102,7 +104,7 @@ const stateObjects = {
         },
         exit: async function () {
             console.log("Exited Follow state");
-            this.stateMachine.currentState.exit();
+            this.stateMachine.currentState().exit();
             bot.chat("Stopped following!")
         },
         extras: {
@@ -124,7 +126,7 @@ const stateObjects = {
                         await stateObjects.Follow.stateMachine.transition(stateObjects.Follow.states.FollowLost);
                     } else {
                         // Keep checking if target has moved away
-                        while (stateObjects.Follow.stateMachine.currentState === this) { // todo test if we need to bring back the name property
+                        while (stateObjects.Follow.stateMachine.currentState() === this) { // todo test if we need to bring back the name property
                             if (target.position.distanceTo(bot.entity.position) > 2) {
                                 await stateObjects.Follow.stateMachine.transition(stateObjects.Follow.states.Moving);
                                 break
@@ -159,7 +161,7 @@ const stateObjects = {
                     const targetName = stateObjects.Follow.extras.targetName;
 
                     // look for target
-                    while (stateObjects.Follow.stateMachine.currentState === this) {
+                    while (stateObjects.Follow.stateMachine.currentState() === this) {
                         const target = (targetName && bot.players[targetName]) ? bot.players[targetName].entity : null;
                         if (target) {
                             await stateObjects.Follow.stateMachine.transition(stateObjects.Follow.states.FollowStart);
@@ -182,8 +184,9 @@ const stateObjects = {
         },
         exit: async function () {
             console.log("Exited Ride state");
-            this.stateMachine.currentState.exit();
+            this.stateMachine.currentState().exit();
         },
+        pausable: true,
         stateMachine: new StateMachine(),
         shouldDismount: function () {
             this.stateMachine.transition(this.states.ShouldDismount)
@@ -192,7 +195,7 @@ const stateObjects = {
             this.stateMachine.transition(this.states.Riding)
         },
         dismount: function () {
-            stateMachine.idle()
+            idle()
         },
         states: {
             RideStart: {
@@ -214,7 +217,7 @@ const stateObjects = {
                     console.log("Entered ShouldDismount state");
                     try {
                         bot.dismount();
-                        stateMachine.idle();
+                        idle();
                     } catch (error) {
                         // If we fail to dismount, just do it manually with sneak
                         console.log(error)
@@ -247,7 +250,7 @@ const stateObjects = {
         },
         exit: async function () {
             console.log("Exited Sleep state");
-            this.stateMachine.currentState.exit();
+            this.stateMachine.currentState().exit();
         },
         stateMachine: new StateMachine(),
         shouldWake: function () {
@@ -257,7 +260,7 @@ const stateObjects = {
             this.stateMachine.transition(this.states.Sleeping);
         },
         wake: function () {
-            stateMachine.idle();
+            idle();
         },
         states: {
             SleepStart: {
@@ -274,12 +277,12 @@ const stateObjects = {
                             await bot.sleep(bed)
                         } else {
                             bot.chat("Oh woops, I can't find a bed!")
-                            stateMachine.idle();
+                            idle();
                         }
                     } catch (error) {
                         // "Can only sleep at night or during thunderstorm"
                         console.log(error)
-                        stateMachine.idle();
+                        idle();
                     }
                 },
                 exit: async function () {
@@ -316,7 +319,7 @@ const stateObjects = {
             bot.setControlState(this.extras.direction, true)
             await bot.waitForTicks(5)
             bot.setControlState(this.extras.direction, false)
-            stateMachine.idle()
+            idle()
         },
         exit: async function () {
             console.log("Exited Step state");
@@ -335,15 +338,16 @@ const stateObjects = {
         exit: async function () {
             console.log("Exited GoTo state");
             bot.setControlState("jump", false)
-            // TODO clear goal
+            bot.pathfinder.stop();
         },
+        pausable: true,
         extras: {
             x: null,
             y: null,
             z: null
         },
         movingFinished: function () {
-            stateMachine.idle();
+            idle(true);
         }
     },
 
@@ -355,24 +359,20 @@ const stateObjects = {
         },
         exit: async function () {
             console.log("Exited Gunpowder state");
-            this.stateMachine.currentState.exit();
-            // Store state for recovery if interrupted
-            // stateMachine.parkedState = this;
+            this.stateMachine.currentState().exit();
         },
+        pausable: true,
         resume: async function () {
             console.log("Resumed Gunpowder state");
             // establish correct state and resume it
-            if (this.stateMachine.currentState.resume) {
-                this.stateMachine.currentState.resume();
+            if (this.stateMachine.currentState().resume) {
+                this.stateMachine.currentState().resume();
             } else {
-                this.stateMachine.currentState.enter();
+                this.stateMachine.currentState().enter();
             }
         },
         movingFinished: function () {
-            switch (this.stateMachine.currentState) {
-                case this.states.GunpowderStart:
-                    this.stateMachine.transition(this.states.FungustusHubToSpawn);
-                    break;
+            switch (this.stateMachine.currentState()) {
                 case this.states.FungustusHubToSpawn:
                     this.stateMachine.transition(this.states.WaitForPortalToOverWorld);
                     break;
@@ -383,7 +383,7 @@ const stateObjects = {
                     this.stateMachine.transition(this.states.GoToChest, { direction: 'North' });
                     break;
                 case this.states.GoToChest:
-                    this.stateMachine.transition(this.states.TakeFromChest, this.stateMachine.currentState.extras);
+                    this.stateMachine.transition(this.states.TakeFromChest, this.stateMachine.currentState().extras);
                     break;
                 case this.states.GoToPortal:
                     this.stateMachine.transition(this.states.WaitForPortalToNether);
@@ -399,10 +399,16 @@ const stateObjects = {
                 enter: async function () {
                     console.log("Entered GunpowderStart state");
                     // Establish initial conditions, either accept them and navigate to starting point or inform user that I need to be relocated
-                    await move(bot, new Vec3(730, 129, -3292))
+                    if (bot.game.dimension != "the_nether") {
+                        bot.chat("I need to be in the nether to start this mission!");
+                        idle(true);
+                    } else {
+                        this.stateMachine.transition(this.states.FungustusHubToSpawn);
+                    }
                 },
                 exit: async function () {
                     console.log("Exited GunpowderStart state");
+                    bot.pathfinder.stop();
                 },
             },
             FungustusHubToSpawn: {
@@ -413,6 +419,7 @@ const stateObjects = {
                 },
                 exit: async function () {
                     console.log("Exited FungustusHubToSpawn state");
+                    bot.pathfinder.stop();
                 },
             },
             WaitForPortalToOverWorld: {
@@ -437,7 +444,7 @@ const stateObjects = {
                     // wait for ticks 100 at a time and update ticksElapsed until 10000 has been reached
                     const required = 100000; // TODO test
                     const interval = 100;
-                    while (stateObjects.Gunpowder.stateMachine.currentState === this && this.extras.ticksElapsed < required) {
+                    while (stateObjects.Gunpowder.stateMachine.currentState() === this && this.extras.ticksElapsed < required) {
                         bot.setControlState('sneak', this.sneak);
                         this.sneak = !this.sneak;
                         await bot.waitForTicks(interval);
@@ -460,6 +467,7 @@ const stateObjects = {
                 },
                 exit: async function () {
                     console.log("Exited WalkToEdge state");
+                    bot.pathfinder.stop();
                 },
             },
             JumpOffPlatform: {
@@ -487,6 +495,7 @@ const stateObjects = {
                 exit: async function () {
                     console.log("Exited GoToCollection state");
                     bot.setControlState("jump", false)
+                    bot.pathfinder.stop();
                 },
             },
             GoToChest: {
@@ -509,6 +518,7 @@ const stateObjects = {
                 },
                 exit: async function () {
                     console.log("Exited GoToChest state");
+                    bot.pathfinder.stop();
                 },
                 extras: {
                     direction: null
@@ -554,6 +564,7 @@ const stateObjects = {
                 },
                 exit: async function () {
                     console.log("Exited GoToPortal state");
+                    bot.pathfinder.stop();
                 },
                 extras: {
                     direction: null
@@ -577,6 +588,7 @@ const stateObjects = {
                 },
                 exit: async function () {
                     console.log("Exited SpawnToFungustusHub state");
+                    bot.pathfinder.stop();
                 },
             },
             PutInChest: {
@@ -607,7 +619,7 @@ const stateObjects = {
                 maxDistance: 6
             })
             await takeAll(bot, chest);
-            stateMachine.idle();
+            idle();
         },
         exit: async function () {
             console.log("Exited Take state");
@@ -623,7 +635,7 @@ const stateObjects = {
                 maxDistance: 6
             })
             await putAll(bot, chest);
-            stateMachine.idle();
+            idle();
         },
         exit: async function () {
             console.log("Exited Dump state");
@@ -644,6 +656,7 @@ bot.once('spawn', () => {
 
 bot.on('autoeat_started', () => {
     console.log('Auto Eat started!')
+
 })
 
 bot.on('autoeat_stopped', () => {
@@ -673,32 +686,32 @@ bot.on('message', (jsonMsg) => {
 // listen for state events
 bot.on('goal_reached', () => {
     console.log('goal_reached')
-    if (stateMachine.currentState.movingFinished) {
-        stateMachine.currentState.movingFinished()
+    if (stateMachine.currentState().movingFinished) {
+        stateMachine.currentState().movingFinished()
     }
 })
 
 bot.on('mount', () => {
-    if (stateMachine.currentState.mount) {
-        stateMachine.currentState.mount()
+    if (stateMachine.currentState().mount) {
+        stateMachine.currentState().mount()
     }
 })
 
 bot.on('dismount', () => {
-    if (stateMachine.currentState.dismount) {
-        stateMachine.currentState.dismount()
+    if (stateMachine.currentState().dismount) {
+        stateMachine.currentState().dismount()
     }
 })
 
 bot.on('sleep', () => {
-    if (stateMachine.currentState.sleep) {
-        stateMachine.currentState.sleep()
+    if (stateMachine.currentState().sleep) {
+        stateMachine.currentState().sleep()
     }
 })
 
 bot.on('wake', () => {
-    if (stateMachine.currentState.wake) {
-        stateMachine.currentState.wake()
+    if (stateMachine.currentState().wake) {
+        stateMachine.currentState().wake()
     }
 })
 
@@ -712,33 +725,48 @@ bot.on('chat', (username, message) => {
             stateMachine.transition(stateObjects.Follow, { targetName: username });
         }
         else if (message.match(/.*stop.*/i)) {
-            stateMachine.idle(true);
+            idle(true);
         }
         else if (message.match(/.*get in.*/i)) {
             stateMachine.transition(stateObjects.Ride);
         }
         else if (message.match(/.*get out.*/i)) {
-            if (stateMachine.currentState.shouldDismount) {
-                stateMachine.currentState.shouldDismount();
+            if (stateMachine.currentState().shouldDismount) {
+                stateMachine.currentState().shouldDismount();
             }
         }
         else if (matchesSleep) {
-            //stateMachine.transition(stateObjects.Sleep);
+            stateMachine.transition(stateObjects.Sleep);
         }
-        else if (message.match(/.*wake up.*/i)) {
-            if (stateMachine.currentState.shouldWake) {
-                stateMachine.currentState.shouldWake();
+        else if (message.match(/.*wake.*/i)) {
+            if (stateMachine.currentState().shouldWake) {
+                stateMachine.currentState().shouldWake();
             } else {
-                bot.chat("I'm not asleep!")
+                bot.chat("I'm not asleep!");
             }
         }
         else if (message.match(/.*step.*/i)) {
-            const step = message.split("step ")[1]
+            const step = message.split("step ")[1];
             stateMachine.transition(stateObjects.Step, { direction: step });
         }
-        else if (message.match(/.*go to.*/i)) {
-            const coords = message.split("go to ")[1].split(" ")
-            stateMachine.transition(stateObjects.GoTo, { x: coords[0], y: coords[1], z: coords[2] });
+        else if (message.match(/.*goto.*/i)) {
+            async function goTo() {
+                const waypoints = (await readMemory()).waypoints;
+                console.log("memory: " + waypoints);
+                const args = message.split("goto ")[1]
+                const waypoint = waypoints[args]
+                if (!waypoint && args.split(" ").length != 3) {
+                    bot.chat("I don't know how to get there!")
+                } else if (waypoint.d != bot.game.dimension) {
+                    bot.chat("Whoa! That's in the " + waypoint.d.replace("the_", "") + ", I'm in the " + bot.game.dimension.replace("the_", ""))
+                }
+                else {
+                    const coords = waypoint ? [waypoints[args].x, waypoints[args].y, waypoints[args].z] : args.split(" ");
+                    stateMachine.transition(stateObjects.GoTo, { x: coords[0], y: coords[1], z: coords[2] });
+                    bot.chat("On my way!")
+                }
+            }
+            goTo()
         }
         else if (message.match(/.*take.*/i)) {
             stateMachine.transition(stateObjects.Take);
@@ -750,29 +778,66 @@ bot.on('chat', (username, message) => {
             stateMachine.transition(stateObjects.Gunpowder);
         }
         else if (message.match(/.*@.*/i)) {
-            bot.chat("I'm at: " + bot.entity.position);
+            const p = bot.entity.position;
+            bot.chat("I'm at " + Math.round(p.x) + " " + Math.round(p.y) + " " + Math.round(p.z) + " in the " + bot.game.dimension.replace("the_", ""));
         }
         else if (message.match(/.*status.*/i)) {
             bot.chat("I feel nothing!");
         }
-        else if (false && message.match(/.*help.*/i)) {
-            bot.chat("Lyrdl Bot commands:"
-                + "\nlb follow -> make me follow you (WIP - cannot go through doors)"
-                + "\nlb stop -> make me return to idle state"
-                + "\nlb get in -> make me get in the nearest boat"
-                + "\nlb get out -> make me get out of a boat"
-                + "\nlb sleep -> make me sleep in the nearest bed"
-                + "\nlb take -> make me take all items from the nearest chest (untested)"
-                + "\nlb dump -> make me dump all items in the nearest chest (untested)"
-                + "\nlb gunpowder -> send me on a mission to collect gunpowder (WIP)"
-                + "\nlb @ -> ask for my location"
-                + "\nlb status -> ask me how I'm feeling (WIP)"
-                + "\nOn the roadmap:"
-                + "\nAuto eating"
-                + "\nHandle doors"
-                + "\nAlphabetical item sorting"
-                + "\nActivate mob switch"
-                + "\nLLM interface")
+        else if (message.match(/.*waypoints.*/i)) {
+            async function waypoints() {
+                const waypoints = (await readMemory()).waypoints;
+                for (const [key, value] of Object.entries(waypoints)) {
+                    const desc = value.decsription ? ", " + value.description : ""
+                    bot.chat(key + desc + " at " + value.x + " " + value.y + " " + value.z + " in " + value.d);
+                    await bot.waitForTicks(10);
+                }
+            }
+            waypoints();
+        }
+        else if (message.match(/.*waypoint.*/i)) {
+            const args = message.split("waypoint ")[1].split(" ")
+            if (args.length < 3 || args.length > 4) {
+                bot.chat("Not enough arguments, try 'lb waypoint [name] [x] [y] [z] [overworld|the_nether|the_end]'")
+            } else {
+                const waypoint = {
+                    x: args[1],
+                    y: args[2],
+                    z: args[3],
+                    d: args[4] ?? "overworld"
+                }
+                updateMemory((memory) => {
+                    memory.waypoints[args[0]] = waypoint;
+                    return memory
+                })
+                bot.chat("Set waypoint " + args[0]);
+            }
+        }
+        else if (message.match(/.*help.*/i)) {
+            async function spitHelp() {
+                const text = `Lyrdl Bot commands:
+lb follow -> make me follow you (WIP - cannot go through doors)
+lb stop -> make me return to idle state
+lb get in -> make me get in the nearest boat
+lb get out -> make me get out of a boat
+lb step [forward|back|left|right] -> make me take a step in the given direction
+lb goto [x] [y] [z] -> make me head to the given coords
+lb goto [waypoint] -> make me head to the given waypoint
+lb waypoint [name] [x] [y] [z] [overworld|the_nether|the_end] -> save a waypoint with the given name coords and dimmension (see waypoints in "memory.json")
+lb sleep -> make me sleep in the nearest bed
+lb wake -> make me wake up
+lb take -> make me take all items from the nearest chest
+lb dump -> make me dump all items in the nearest chest
+lb gunpowder -> send me on a mission to collect gunpowder
+lb @ -> ask for my location
+lb status -> ask me how I'm feeling (WIP)`
+                const lines = text.split("\n")
+                for (var i = 0; i < lines.length; i++) {
+                    bot.chat(lines[i]);
+                    await bot.waitForTicks(10);
+                }
+            }
+            spitHelp()
         }
         else if (matchesMe) {
             bot.chat("You talking to me? Say 'lb help' for tips.")
@@ -784,11 +849,30 @@ bot.on('chat', (username, message) => {
 
 // Prepend time stamp and write message to log file and console
 const log = (message) => {
-    let stampedMessage = `${new Date().toLocaleString("en-UK")}: ${message}\n`
+    let stampedMessage = `${new Date().toLocaleString("en-UK")}: ${message}\n`;
     fileStream.appendFile('logs.txt', stampedMessage, function (err) {
         if (err) throw err;
+    });
+    console.log(stampedMessage);
+}
+
+function updateMemory(update) {
+    fileStream.readFile('memory.json', 'utf-8', callback_function = function (err, data) {
+        if (err) throw err;
+        const memory = JSON.parse(data)
+        fileStream.writeFile('memory.json', JSON.stringify(update(memory)), function (err) {
+            if (err) throw err;
+        })
+
     })
-    console.log(stampedMessage)
+}
+
+async function readMemory() {
+    const data = fileStream.readFileSync('memory.json', 'utf-8', callback_function = function (err) {
+        if (err) throw err;
+    })
+    const memory = JSON.parse(data)
+    return memory
 }
 
 // Read command line text and post it as a message in game
@@ -844,7 +928,7 @@ async function putAll(bot, chest, itemName) {
     const window = await bot.openContainer(chest)
 
     for (const item of window.items()) {
-        if(!itemName || item.name == itemName){
+        if (!itemName || item.name == itemName) {
             await depositItem(item, item.count)
         }
     }

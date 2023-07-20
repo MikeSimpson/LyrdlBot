@@ -363,11 +363,14 @@ function createBot() {
             description: function () { return "collect gunpowder, I am currently " + this.stateMachine.currentState().description() },
             enter: async function () {
                 console.log("Entered Gunpowder state");
-                this.stateMachine.start(this.states.GunpowderStart);
+                this.stateMachine.start(this.extras.startState ?? this.states.GunpowderStart);
             },
             exit: async function () {
                 console.log("Exited Gunpowder state");
                 this.stateMachine.currentState().exit();
+            },
+            extras: {
+                startState: null
             },
             pausable: true,
             resume: async function () {
@@ -444,7 +447,7 @@ function createBot() {
                     },
                 },
                 WaitForGunpowder: {
-                    description: function () { return "waiting for the gunpowder" },
+                    description: function () { return "waiting for the gunpowder, " + this.extras.ticksElapsed + "/" + this.extras.ticksRequired + " ticks elapsed." },
                     enter: async function () {
                         console.log("Entered WaitForGunpowder state");
                         this.sneak = false
@@ -454,9 +457,8 @@ function createBot() {
                             }
                         }
                         // wait for ticks 100 at a time and update ticksElapsed until 10000 has been reached
-                        const required = 30000; // TODO test
                         const interval = 100;
-                        while (stateObjects.Gunpowder.stateMachine.currentState() === this && this.extras.ticksElapsed < required) {
+                        while (stateObjects.Gunpowder.stateMachine.currentState() === this && this.extras.ticksElapsed < this.extras.ticksRequired) {
                             bot.setControlState('sneak', this.sneak);
                             this.sneak = !this.sneak;
                             await bot.waitForTicks(interval);
@@ -468,7 +470,8 @@ function createBot() {
                         console.log("Exited WaitForGunpowder state");
                     },
                     extras: {
-                        ticksElapsed: 0
+                        ticksElapsed: 0,
+                        ticksRequired: 30000
                     }
                 },
                 WalkToEdge: {
@@ -573,8 +576,8 @@ function createBot() {
                         direction: null
                     }
                 },
-                GoToPortal: {                   
-                     description: function () { return "heading back to the nether" },
+                GoToPortal: {
+                    description: function () { return "heading back to the nether" },
                     enter: async function () {
                         console.log("Entered GoToPortal state");
                         // move to portal coords
@@ -588,7 +591,7 @@ function createBot() {
                         direction: null
                     }
                 },
-                WaitForPortalToNether: {                    
+                WaitForPortalToNether: {
                     description: function () { return "going through the portal to the nether" },
                     enter: async function () {
                         console.log("Entered WaitForPortalToNether state");
@@ -668,7 +671,7 @@ function createBot() {
 
     bot.once('spawn', () => {
         stateMachine.start(stateObjects.Idle);
-        prompt();
+        prompt(bot);
         mineflayerViewer(bot, { port: 3007, firstPerson: true });
         bot.autoEat.options = {
             priority: 'foodPoints',
@@ -772,6 +775,13 @@ function createBot() {
                 const step = message.split("step ")[1];
                 stateMachine.transition(stateObjects.Step, { direction: step });
             }
+            else if (message.match(/.*gunpowder.*/i)) {
+                const state = message.split("gunpowder ")[1]
+                const extras = state ? {
+                    startState: stateObjects.Gunpowder.states[state]
+                } : null
+                stateMachine.transition(stateObjects.Gunpowder, extras);
+            }
             else if (message.match(/.*goto.*/i)) {
                 async function goTo() {
                     const waypoints = (await readMemory()).waypoints;
@@ -796,9 +806,6 @@ function createBot() {
             }
             else if (message.match(/.*dump.*/i)) {
                 stateMachine.transition(stateObjects.Dump);
-            }
-            else if (message.match(/.*gunpowder.*/i)) {
-                stateMachine.transition(stateObjects.Gunpowder);
             }
             else if (message.match(/.*up2.*/i)) {
                 bot.chat("My current task is to " + stateMachine.currentState().description())
@@ -915,10 +922,10 @@ const readline = require('readline').createInterface({
     output: process.stdout
 });
 
-const prompt = () => {
+const prompt = (bot) => {
     readline.question('', msg => {
         bot.chat(msg)
-        prompt()
+        prompt(bot)
     })
 }
 

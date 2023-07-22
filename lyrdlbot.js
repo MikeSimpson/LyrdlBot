@@ -8,6 +8,12 @@ const Entity = require("prismarine-entity");
 const Vec3 = require('vec3').Vec3;
 const mineflayerViewer = require('prismarine-viewer').mineflayer;
 const autoeat = require('mineflayer-auto-eat').plugin;
+const { Configuration, OpenAIApi } = require('openai');
+const configuration = new Configuration({
+    organization: "org-CkmTNbxDhBDD1dFADqcBaclt",
+    apiKey: process.env.OPEN_AI_KEY,
+});
+const openai = new OpenAIApi(configuration);
 
 // A class to hold the current state and handle state transitions
 class StateMachine {
@@ -59,8 +65,9 @@ const options = {
 function createBot() {
     const bot = mineflayer.createBot(options)
 
+    const lastTenMessages = [];
+
     bot.loadPlugin(pathfinder);
-    bot.loadPlugin(require('mineflayer-pathfinder').pathfinder);
     bot.loadPlugin(autoeat);
 
     async function idle(replace) {
@@ -101,13 +108,13 @@ function createBot() {
             description: function () { return "follow " + this.extras.targetName },
             enter: async function () {
                 console.log("Entered Follow state with target: " + this.extras.targetName);
-                bot.chat("I will follow!");
+                // bot.chat("I will follow!");
                 this.stateMachine.start(this.states.FollowStart);
             },
             exit: async function () {
                 console.log("Exited Follow state");
                 this.stateMachine.currentState().exit();
-                bot.chat("Stopped following!")
+                // bot.chat("Stopped following!")
             },
             extras: {
                 targetName: null,
@@ -336,10 +343,22 @@ function createBot() {
         },
 
         GoTo: {
-            description: function () { return "go to " + this.extras.x + " " + this.extras.y + " " + this.extras.z },
+            description: function () {
+                if (this.extras.waypoint) {
+                    return "go to " + this.extras.waypoint.description ?? this.extras.x + " " + this.extras.y + " " + this.extras.z
+                } else {
+                    return "go to " + this.extras.x + " " + this.extras.y + " " + this.extras.z
+                }
+            },
             enter: async function () {
-                console.log("Entered GoTo state with coords: " + this.extras.x + " " + this.extras.y + " " + this.extras.z);
                 bot.setControlState("jump", true)
+                if (this.extras.waypoint) {
+                    this.extras.x = this.extras.waypoint.x
+                    this.extras.y = this.extras.waypoint.y
+                    this.extras.z = this.extras.waypoint.z
+                }
+                console.log("Entered GoTo state with coords: " + this.extras.x + " " + this.extras.y + " " + this.extras.z);
+
                 await move(bot, new Vec3(this.extras.x, this.extras.y, this.extras.z), 0)
             },
             exit: async function () {
@@ -447,7 +466,7 @@ function createBot() {
                     },
                 },
                 WaitForGunpowder: {
-                    description: function () { return "waiting for the gunpowder, " + this.extras.ticksElapsed + "/" + this.extras.ticksRequired + " ticks elapsed." },
+                    description: function () { return "waiting for the gunpowder, " + this.extras.ticksElapsed + "/" + this.ticksRequired + " ticks elapsed." },
                     enter: async function () {
                         console.log("Entered WaitForGunpowder state");
                         this.sneak = false
@@ -458,7 +477,7 @@ function createBot() {
                         }
                         // wait for ticks 100 at a time and update ticksElapsed until 10000 has been reached
                         const interval = 100;
-                        while (stateObjects.Gunpowder.stateMachine.currentState() === this && this.extras.ticksElapsed < this.extras.ticksRequired) {
+                        while (stateObjects.Gunpowder.stateMachine.currentState() === this && this.extras.ticksElapsed < this.ticksRequired) {
                             bot.setControlState('sneak', this.sneak);
                             this.sneak = !this.sneak;
                             await bot.waitForTicks(interval);
@@ -469,9 +488,9 @@ function createBot() {
                     exit: async function () {
                         console.log("Exited WaitForGunpowder state");
                     },
+                    ticksRequired: 30000,
                     extras: {
                         ticksElapsed: 0,
-                        ticksRequired: 30000
                     }
                 },
                 WalkToEdge: {
@@ -704,11 +723,6 @@ function createBot() {
         log("Error: " + reason)
     })
 
-    // listen for any message and log it
-    bot.on('message', (jsonMsg) => {
-        log(jsonMsg)
-    })
-
     // listen for state events
     bot.on('goal_reached', () => {
         console.log('goal_reached')
@@ -718,13 +732,15 @@ function createBot() {
     })
 
     bot.on('mount', () => {
-        if (stateMachine.currentState().mount) {
+        if (stateMachine.currentState() && stateMachine.currentState().mount) {
             stateMachine.currentState().mount()
+        } else {
+            bot.dismount();
         }
     })
 
     bot.on('dismount', () => {
-        if (stateMachine.currentState().dismount) {
+        if (stateMachine.currentState() && stateMachine.currentState().dismount) {
             stateMachine.currentState().dismount()
         }
     })
@@ -741,147 +757,184 @@ function createBot() {
         }
     })
 
-    // listen for chat messages
-    bot.on('chat', (username, message) => {
-        // Respond to messages directed at the bot
-        matchesMe = message.match(new RegExp(".*" + bot.username + "|l!|lb.*", "i"))
-        matchesSleep = message.match(/.*(sleep|zz).*/i) && !message.match(/.*sleep ->.*/i)
-        if (username != bot.username && matchesMe || message.match(/.*lb!.*/i) || matchesSleep) {
-            if (message.match(/.*follow.*/i)) {
-                stateMachine.transition(stateObjects.Follow, { targetName: username });
-            }
-            else if (message.match(/.*stop.*/i)) {
-                idle(true);
-            }
-            else if (message.match(/.*get in.*/i)) {
-                stateMachine.transition(stateObjects.Ride);
-            }
-            else if (message.match(/.*get out.*/i)) {
-                if (stateMachine.currentState().shouldDismount) {
-                    stateMachine.currentState().shouldDismount();
-                }
-            }
-            else if (matchesSleep) {
-                stateMachine.transition(stateObjects.Sleep);
-            }
-            else if (message.match(/.*wake.*/i)) {
-                if (stateMachine.currentState().shouldWake) {
-                    stateMachine.currentState().shouldWake();
-                } else {
-                    bot.chat("I'm not asleep!");
-                }
-            }
-            else if (message.match(/.*step.*/i)) {
-                const step = message.split("step ")[1];
-                stateMachine.transition(stateObjects.Step, { direction: step });
-            }
-            else if (message.match(/.*gunpowder.*/i)) {
-                const state = message.split("gunpowder ")[1]
-                const extras = state ? {
-                    startState: stateObjects.Gunpowder.states[state]
-                } : null
-                stateMachine.transition(stateObjects.Gunpowder, extras);
-            }
-            else if (message.match(/.*goto.*/i)) {
-                async function goTo() {
-                    const waypoints = (await readMemory()).waypoints;
-                    console.log("memory: " + waypoints);
-                    const args = message.split("goto ")[1]
-                    const waypoint = waypoints[args]
-                    if (!waypoint && args.split(" ").length != 3) {
-                        bot.chat("I don't know how to get there!")
-                    } else if (waypoint.d != bot.game.dimension) {
-                        bot.chat("Whoa! That's in the " + waypoint.d.replace("the_", "") + ", I'm in the " + bot.game.dimension.replace("the_", ""))
+    // listen for messages
+    bot.on('message', (jsonMsg) => {
+        log(jsonMsg);
+        const message = `${jsonMsg}`;
+        lastTenMessages.push(message);
+        if (lastTenMessages.length > 10) {
+            lastTenMessages.shift();
+        }
+        async function handleChat() {
+            const status = await getStatus(stateMachine, bot);
+            if (message.match(/<.*> lb!.*/i)) {
+                processCommand(message);
+            } else {
+                try {
+                    console.log("Fetching response");
+                    const gpt = (await getGpt(lastTenMessages, status)).content;
+                    const cmds = gpt.match(/.*\|.*/) ? gpt.split("|") : [gpt];
+                    for (const cmd of cmds) {
+                        processCommand(cmd.trim().slice(1, -1));
                     }
-                    else {
-                        const coords = waypoint ? [waypoints[args].x, waypoints[args].y, waypoints[args].z] : args.split(" ");
-                        stateMachine.transition(stateObjects.GoTo, { x: coords[0], y: coords[1], z: coords[2] });
-                        bot.chat("On my way!")
-                    }
-                }
-                goTo()
-            }
-            else if (message.match(/.*take.*/i)) {
-                stateMachine.transition(stateObjects.Take);
-            }
-            else if (message.match(/.*dump.*/i)) {
-                stateMachine.transition(stateObjects.Dump);
-            }
-            else if (message.match(/.*up2.*/i)) {
-                bot.chat("My current task is to " + stateMachine.currentState().description())
-            }
-            else if (message.match(/.*@.*/i)) {
-                const p = bot.entity.position;
-                bot.chat("I'm at " + Math.round(p.x) + " " + Math.round(p.y) + " " + Math.round(p.z) + " in the " + bot.game.dimension.replace("the_", ""));
-            }
-            else if (message.match(/.*status.*/i)) {
-                bot.chat("I feel nothing!");
-            }
-            else if (message.match(/.*waypoints.*/i)) {
-                async function waypoints() {
-                    const waypoints = (await readMemory()).waypoints;
-                    for (const [key, value] of Object.entries(waypoints)) {
-                        const desc = value.description ? " -> " + value.description : ""
-                        bot.chat(key + desc + " at " + value.x + " " + value.y + " " + value.z + " in " + value.d.replace("_", " "));
-                        await bot.waitForTicks(20);
-                    }
-                }
-                waypoints();
-            }
-            else if (message.match(/.*waypoint.*/i)) {
-                const args = message.split("waypoint ")[1].split(" ")
-                if (args.length < 3 || args.length > 4) {
-                    bot.chat("Not enough arguments, try 'lb waypoint [name] [x] [y] [z] [overworld|the_nether|the_end]'")
-                } else {
-                    const waypoint = {
-                        x: args[1],
-                        y: args[2],
-                        z: args[3],
-                        d: args[4] ?? "overworld"
-                    }
-                    updateMemory((memory) => {
-                        memory.waypoints[args[0]] = waypoint;
-                        return memory
-                    })
-                    bot.chat("Set waypoint " + args[0]);
+                } catch (error) {
+                    console.log(error);
+                    bot.chat("I'm a little slow today, start your message with lb! to access my basic systems")
                 }
             }
-            else if (message.match(/.*help.*/i)) {
-                async function spitHelp() {
-                    const text = `Lyrdl Bot commands:
-lb follow -> make me follow you (WIP - cannot go through doors)
-lb stop -> make me return to idle state
-lb get in -> make me get in the nearest boat
-lb get out -> make me get out of a boat
-lb step [forward | back | left | right] -> make me take a step in the given direction
-lb goto [x] [y] [z] -> make me head to the given coords
-lb goto [waypoint] -> make me head to the given waypoint
-lb waypoint [name] [x] [y] [z] [overworld | the_nether | the_end] -> save a waypoint with the given name coords and dimmension (see waypoints in "memory.json")
-lb waypoints -> list all waypoints
-lb sleep -> make me sleep in the nearest bed
-lb wake -> make me wake up
-lb take -> make me take all items from the nearest chest
-lb dump -> make me dump all items in the nearest chest
-lb gunpowder -> send me on a mission to collect gunpowder
-lb @ -> ask for my location
-lb up2 -> ask for my current task
-lb status -> ask me how I'm feeling (WIP)
-lb go die in a hole -> ask me to attempt to punch a hole straight down until I die (WIP)`
-                    const lines = text.split("\n")
-                    for (var i = 0; i < lines.length; i++) {
-                        bot.chat(lines[i]);
-                        await bot.waitForTicks(20);
-                    }
-                }
-                spitHelp()
-            }
-            else if (matchesMe) {
-                bot.chat("You talking to me? Say 'lb help' for tips.")
+        }
+        if (!message.match(/<L_Y_R_D_L>.*/)) {
+            try {
+                handleChat()
+            } catch (error) {
+                bot.chat("Error process chat!")
             }
         }
     })
 
     bot.on('end', createBot)
+
+    async function processCommand(message) {
+        console.log("processing: " + message);
+        // Respond to messages directed at the bot
+        matchesSleep = message.match(/.*(sleep|zz).*/i) && !message.match(/.*sleep ->.*/i)
+        if (message.match(/.*chat.*/i)) {
+            const chat = message.split("chat ")[1];
+            bot.chat(chat);
+        }
+        else if (message.match(/.*follow.*/i)) {
+            const user = message.split("follow ")[1];
+            stateMachine.transition(stateObjects.Follow, { targetName: user });
+        }
+        else if (message.match(/.*stop.*/i)) {
+            idle(true);
+        }
+        else if (message.match(/.*get in.*/i)) {
+            stateMachine.transition(stateObjects.Ride);
+        }
+        else if (message.match(/.*get out.*/i)) {
+            if (stateMachine.currentState().shouldDismount) {
+                stateMachine.currentState().shouldDismount();
+            }
+        }
+        else if (matchesSleep) {
+            stateMachine.transition(stateObjects.Sleep);
+        }
+        else if (message.match(/.*wake.*/i)) {
+            if (stateMachine.currentState().shouldWake) {
+                stateMachine.currentState().shouldWake();
+            } else {
+                bot.chat("I'm not asleep!");
+            }
+        }
+        else if (message.match(/.*step.*/i)) {
+            const step = message.split("step ")[1];
+            stateMachine.transition(stateObjects.Step, { direction: step });
+        }
+        else if (message.match(/.*gunpowder.*/i)) {
+            const state = message.split("gunpowder ")[1]
+            const extras = state ? {
+                startState: stateObjects.Gunpowder.states[state]
+            } : {}
+            stateMachine.transition(stateObjects.Gunpowder, extras);
+        }
+        else if (message.match(/.*goto.*/i)) {
+            async function goTo() {
+                const waypoints = (await readMemory()).waypoints;
+                const args = message.split("goto ")[1]
+                const waypoint = waypoints[args]
+                if (waypoint && waypoint.d != bot.game.dimension) {
+                    bot.chat("Whoa! That's in the " + waypoint.d.replace("the_", "") + ", I'm in the " + bot.game.dimension.replace("the_", ""))
+                }
+                else if (waypoint) {
+                    stateMachine.transition(stateObjects.GoTo, { waypoint: waypoint });
+                    // bot.chat("On my way!")
+                }
+                else if (args.split(" ").length == 3) {
+                    const coords = args.split(" ");
+                    stateMachine.transition(stateObjects.GoTo, { x: coords[0], y: coords[1], z: coords[2] });
+                    // bot.chat("On my way!")
+                } else {
+                    bot.chat("I don't know how to get there!")
+                }
+            }
+            goTo()
+        }
+        else if (message.match(/.*take.*/i)) {
+            stateMachine.transition(stateObjects.Take);
+        }
+        else if (message.match(/.*dump.*/i)) {
+            stateMachine.transition(stateObjects.Dump);
+        }
+        else if (message.match(/.*up2.*/i)) {
+            bot.chat("My current task is to " + stateMachine.currentState().description())
+        }
+        else if (message.match(/.*@.*/i)) {
+            const p = bot.entity.position;
+            bot.chat("I'm at " + Math.round(p.x) + " " + Math.round(p.y) + " " + Math.round(p.z) + " in the " + bot.game.dimension.replace("the_", ""));
+        }
+        else if (message.match(/.*status.*/i)) {
+            bot.chat("I feel nothing!");
+        }
+        else if (message.match(/.*waypoints.*/i)) {
+            async function waypoints() {
+                const waypoints = (await readMemory()).waypoints;
+                for (const [key, value] of Object.entries(waypoints)) {
+                    const desc = value.description ? " -> " + value.description : ""
+                    bot.chat(key + desc + " at " + value.x + " " + value.y + " " + value.z + " in " + value.d.replace("_", " "));
+                    await bot.waitForTicks(20);
+                }
+            }
+            waypoints();
+        }
+        else if (message.match(/.*waypoint.*/i)) {
+            const args = message.split("waypoint ")[1].split(" ")
+            if (args.length < 3 || args.length > 5) {
+                bot.chat("Wrong number of arguments, try 'lb waypoint [name] [x] [y] [z] [overworld|the_nether|the_end]'")
+            } else {
+                const waypoint = {
+                    x: args[1],
+                    y: args[2],
+                    z: args[3],
+                    d: args[4] ?? "overworld"
+                }
+                updateMemory((memory) => {
+                    memory.waypoints[args[0]] = waypoint;
+                    return memory
+                })
+                bot.chat("Set waypoint " + args[0]);
+            }
+        }
+        else if (message.match(/.*help.*/i)) {
+            async function spitHelp() {
+                const text = `Lyrdl Bot commands:
+    lb follow -> make me follow you (WIP - cannot go through doors)
+    lb stop -> make me return to idle state
+    lb get in -> make me get in the nearest boat
+    lb get out -> make me get out of a boat
+    lb step [forward | back | left | right] -> make me take a step in the given direction
+    lb goto [x] [y] [z] -> make me head to the given coords
+    lb goto [waypoint] -> make me head to the given waypoint
+    lb waypoint [name] [x] [y] [z] [overworld | the_nether | the_end] -> save a waypoint with the given name coords and dimmension (see waypoints in "memory.json")
+    lb waypoints -> list all waypoints
+    lb sleep -> make me sleep in the nearest bed
+    lb wake -> make me wake up
+    lb take -> make me take all items from the nearest chest
+    lb dump -> make me dump all items in the nearest chest
+    lb gunpowder -> send me on a mission to collect gunpowder
+    lb @ -> ask for my location
+    lb up2 -> ask for my current task
+    lb status -> ask me how I'm feeling (WIP)
+    lb go die in a hole -> ask me to attempt to punch a hole straight down until I die (WIP)`
+                const lines = text.split("\n")
+                for (var i = 0; i < lines.length; i++) {
+                    bot.chat(lines[i]);
+                    await bot.waitForTicks(20);
+                }
+            }
+            spitHelp()
+        }
+    }
 }
 
 createBot()
@@ -916,6 +969,13 @@ async function readMemory() {
     return memory
 }
 
+async function readPrompt() {
+    const data = fileStream.readFileSync('prompt.txt', 'utf-8', callback_function = function (err) {
+        if (err) throw err;
+    })
+    return data
+}
+
 // Read command line text and post it as a message in game
 const readline = require('readline').createInterface({
     input: process.stdin,
@@ -927,6 +987,41 @@ const prompt = (bot) => {
         bot.chat(msg)
         prompt(bot)
     })
+}
+
+async function getGpt(lastTenMessages, status) {
+    const messages = [
+        { role: "system", content: (await readPrompt()) + JSON.stringify(status) }
+    ]
+    for (const message of lastTenMessages) {
+        if (message.match(/<L_Y_R_D_L>.*/)) {
+            messages.push({ role: "assistant", content: "[chat " + message.split("<L_Y_R_D_L> ")[1] + "]" })
+        } else {
+            messages.push({ role: "user", content: message })
+        }
+    }
+    const chatCompletion = await openai.createChatCompletion({
+        model: "gpt-3.5-turbo",
+        messages: messages,
+    });
+    const completion = chatCompletion.data.choices[0].message;
+    console.log(completion);
+    return completion;
+}
+
+async function getStatus(stateMachine, bot) {
+    return {
+        health: bot.health,
+        foodSupply: bot.food,
+        location: {
+            x: bot.entity.position.x,
+            y: bot.entity.position.y,
+            z: bot.entity.position.z,
+            dimension: bot.game.dimension,
+        },
+        task: stateMachine.currentState() ? stateMachine.currentState().description() : "Booting up",
+        waypoints: (await readMemory()).waypoints
+    }
 }
 
 async function move(bot, position, range) {

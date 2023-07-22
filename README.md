@@ -9,7 +9,7 @@ node lyrdlbot.js <SERVER_IP> <SERVER_PORT> <EMAIL_ADDRESS> <PASSWORD>
 - **lb step [forward|back|left|right]** -> make me take a step in the given direction
 - **lb goto [x] [y] [z]** -> make me head to the given coords
 - **lb goto [waypoint]** -> make me head to the given waypoint
-- **lb waypoint [name] [x] [y] [z] [overworld|the_nether|the_end]** -> save a waypoint with the given name coords and dimmension (see waypoints in "memory.json")
+- **lb waypoint [name] [x] [y] [z] [overworld|the_nether|the_end]** -> save a waypoint with the given name coords and dimension (see waypoints in "memory.json")
 - **lb sleep** -> make me sleep in the nearest bed
 - **lb wake** -> make me wake up
 - **lb take** -> make me take all items from the nearest chest
@@ -22,3 +22,5 @@ node lyrdlbot.js <SERVER_IP> <SERVER_PORT> <EMAIL_ADDRESS> <PASSWORD>
 - Alphabetical item sorting
 - Activate mob switch
 - LLM interface
+- Report status including food supply
+- x z goto and waypoint coords

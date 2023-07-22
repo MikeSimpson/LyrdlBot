@@ -1,18 +1,1 @@
-{
-    "waypoints": {
-        "gun_p_o": {
-            "x": 766,
-            "y": 63,
-            "z": 13,
-            "d": "overworld",
-            "description" : "The overworld side portal for the gunpowder farm"
-        },
-        "gun_p_n": {
-            "x": "95",
-            "y": "129",
-            "z": "-6",
-            "d": "the_nether",
-            "description" : "The nether side portal for the gunpowder farm"
-        }
-    }
-}
+{"waypoints":{"gun_p_o":{"x":766,"y":63,"z":13,"d":"overworld","description":"The overworld side portal for the gunpowder farm"},"gun_p_n":{"x":"95","y":"129","z":"-6","d":"the_nether","description":"The nether side portal for the gunpowder farm"},"origin":{"x":"0","y":"64","z":"0","d":"overworld"},"Minland":{"x":"5771","y":"63","z":"-26759","d":"overworld"},"Castle_At_at":{"x":"5805","y":"79","z":"-25541","d":"overworld"},"Mincity":{"x":"5787","y":"71","z":"-26643","d":"overworld"},"middle_o_nowhere":{"x":"1473","y":"72","z":"-829","d":"overworld"}}}

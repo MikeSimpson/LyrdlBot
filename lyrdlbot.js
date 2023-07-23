@@ -806,7 +806,7 @@ function createBot() {
 
     async function processMessage(message) {
         if (message.message) {
-            bot.chat(message.chat);
+            bot.chat(message.message);
         }
         const command = message.command
         if (command) {

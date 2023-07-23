@@ -191,7 +191,7 @@ function createBot() {
             description: function () { return "ride a boat" },
             enter: async function () {
                 console.log("Entered Ride state");
-                this.stateMachine.start(this.states.RideStart);
+                this.stateMachine.start(this.states.Mounting);
             },
             exit: async function () {
                 console.log("Exited Ride state");
@@ -200,7 +200,7 @@ function createBot() {
             pausable: true,
             stateMachine: new StateMachine(),
             shouldDismount: function () {
-                this.stateMachine.transition(this.states.ShouldDismount)
+                this.stateMachine.transition(this.states.Dismounting)
             },
             mount: function () {
                 this.stateMachine.transition(this.states.Riding)
@@ -209,9 +209,9 @@ function createBot() {
                 idle()
             },
             states: {
-                RideStart: {
+                Mounting: {
                     enter: async function () {
-                        console.log("Entered RideStart state");
+                        console.log("Entered Mounting state");
                         // Find nearest vehicle and attempt to mount
                         const vehicle = bot.nearestEntity((entity) => {
                             return entity.kind && entity.kind.match(/.*Vehicles.*/i)
@@ -219,13 +219,13 @@ function createBot() {
                         bot.mount(vehicle)
                     },
                     exit: async function () {
-                        console.log("Exited RideStart state");
+                        console.log("Exited Mounting state");
                     },
                 },
 
-                ShouldDismount: {
+                Dismounting: {
                     enter: async function () {
-                        console.log("Entered ShouldDismount state");
+                        console.log("Entered Dismounting state");
                         try {
                             bot.dismount();
                             idle();
@@ -238,7 +238,7 @@ function createBot() {
                         }
                     },
                     exit: async function () {
-                        console.log("Exited ShouldDismount state");
+                        console.log("Exited Dismounting state");
                     },
                 },
 
@@ -342,7 +342,7 @@ function createBot() {
             }
         },
 
-        GoTo: {
+        Goto: {
             description: function () {
                 if (this.extras.waypoint) {
                     return "go to " + this.extras.waypoint.description ?? this.extras.x + " " + this.extras.y + " " + this.extras.z
@@ -351,11 +351,23 @@ function createBot() {
                 }
             },
             enter: async function () {
-                bot.setControlState("jump", true)
-                if (this.extras.waypoint) {
-                    this.extras.x = this.extras.waypoint.x
-                    this.extras.y = this.extras.waypoint.y
-                    this.extras.z = this.extras.waypoint.z
+                const waypoints = (await readMemory()).waypoints;
+                const waypointObject = waypoints[this.extras.waypoint];
+                if (waypointObject && waypointObject.dimension != bot.game.dimension) {
+                    bot.chat("Whoa! That's in the " + waypointObject.d.replace("the_", "") + ", I'm in the " + bot.game.dimension.replace("the_", ""))
+                }
+                else if (waypointObject) {
+                    stateMachine.transition(stateObjects.Goto, { waypoint: waypointObject });
+                }
+
+                if (waypointObject) {
+                    if (waypointObject && waypointObject.dimension != bot.game.dimension) {
+                        bot.chat("Whoa! That's in the " + waypointObject.d.replace("the_", "") + ", I'm in the " + bot.game.dimension.replace("the_", ""))
+                    } else {
+                        this.extras.x = waypointObject.x
+                        this.extras.y = waypointObject.y
+                        this.extras.z = waypointObject.z
+                    }
                 }
                 console.log("Entered GoTo state with coords: " + this.extras.x + " " + this.extras.y + " " + this.extras.z);
 
@@ -363,14 +375,14 @@ function createBot() {
             },
             exit: async function () {
                 console.log("Exited GoTo state");
-                bot.setControlState("jump", false)
                 bot.pathfinder.stop();
             },
             pausable: true,
             extras: {
                 x: null,
                 y: null,
-                z: null
+                z: null,
+                waypoint: null
             },
             movingFinished: function () {
                 idle(true);
@@ -767,19 +779,17 @@ function createBot() {
         }
         async function handleChat() {
             const status = await getStatus(stateMachine, bot);
+            // console.log(JSON.stringify(status))
             if (message.match(/<.*> lb!.*/i)) {
-                processCommand(message);
+                // TODO JSONify bypass commands
+                processMessage(message);
             } else {
                 try {
-                    console.log("Fetching response");
-                    const gpt = (await getGpt(lastTenMessages, status)).content;
-                    const cmds = gpt.match(/.*\|.*/) ? gpt.split("|") : [gpt];
-                    for (const cmd of cmds) {
-                        processCommand(cmd.trim().slice(1, -1));
-                    }
+                    const content = (await getGpt(lastTenMessages, status)).content;
+                    processMessage(JSON.parse(content));
                 } catch (error) {
                     console.log(error);
-                    bot.chat("I'm a little slow today, start your message with lb! to access my basic systems")
+                    bot.chat("I'm a little slow today, start your message with lb! to bypass my higher brain functions")
                 }
             }
         }
@@ -787,152 +797,89 @@ function createBot() {
             try {
                 handleChat()
             } catch (error) {
-                bot.chat("Error process chat!")
+                bot.chat("Error processing chat!")
             }
         }
     })
 
     bot.on('end', createBot)
 
-    async function processCommand(message) {
-        console.log("processing: " + message);
-        // Respond to messages directed at the bot
-        matchesSleep = message.match(/.*(sleep|zz).*/i) && !message.match(/.*sleep ->.*/i)
-        if (message.match(/.*chat.*/i)) {
-            const chat = message.split("chat ")[1];
-            bot.chat(chat);
+    async function processMessage(message) {
+        if (message.message) {
+            bot.chat(message.chat);
         }
-        else if (message.match(/.*follow.*/i)) {
-            const user = message.split("follow ")[1];
-            stateMachine.transition(stateObjects.Follow, { targetName: user });
-        }
-        else if (message.match(/.*stop.*/i)) {
-            idle(true);
-        }
-        else if (message.match(/.*get in.*/i)) {
-            stateMachine.transition(stateObjects.Ride);
-        }
-        else if (message.match(/.*get out.*/i)) {
-            if (stateMachine.currentState().shouldDismount) {
-                stateMachine.currentState().shouldDismount();
+        const command = message.command
+        if (command) {
+            switch (command) {
+                case "FOLLOW":
+                    // TODO handle error and send LLM a message to correct it
+                    stateMachine.transition(stateObjects.Follow, command.extras);
+                    break;
+                case "STOP":
+                    // TODO Clear statestack
+                    idle(true);
+                    break;
+                case "GET_IN":
+                    stateMachine.transition(stateObjects.Ride);
+                    break;
+                case "GET_OUT":
+                    if (stateMachine.currentState().shouldDismount) {
+                        stateMachine.currentState().shouldDismount();
+                    }
+                    break;
+                case "SLEEP":
+                    stateMachine.transition(stateObjects.Sleep);
+                    break;
+                case "WAKE":
+                    if (stateMachine.currentState().shouldWake) {
+                        stateMachine.currentState().shouldWake();
+                    }
+                    break;
+                case "STEP":
+                    stateMachine.transition(stateObjects.Step, command.extras);
+                    break;
+                case "GUNPOWDER":
+                    //TODO parse state in gunpowder step
+                    stateMachine.transition(stateObjects.Gunpowder, command.extras);
+                    break;
+                case "GOTO":
+                    stateMachine.transition(stateObjects.Goto, command.extras);
+                    break;
+                case "TAKE":
+                    stateMachine.transition(stateObjects.Take);
+                    break;
+                case "DUMP":
+                    stateMachine.transition(stateObjects.Dump);
+                    break;
+                case "WAYPOINT":
+                    const waypoint = {
+                        x: command.extras.x,
+                        y: command.extras.y,
+                        z: command.extras.z,
+                        dimension: command.extras.dimension,
+                        description: command.extras.description ?? ""
+                    }
+                    updateMemory((memory) => {
+                        memory.waypoints[command.extras.name] = waypoint;
+                        return memory
+                    })
+                    break;
+                // For bypass commands
+                case "UP2":
+                    bot.chat("My current task is to " + stateMachine.currentState().description())
+                    break;
+                case "@":
+                    const p = bot.entity.position;
+                    bot.chat("I'm at " + Math.round(p.x) + " " + Math.round(p.y) + " " + Math.round(p.z) + " in the " + bot.game.dimension.replace("the_", ""));
+                    break;
+                case "STATUS":
+                    async function reportStatus() {
+                        const status = await getStatus(stateMachine, bot);
+                        bot.chat(status);
+                    }
+                    reportStatus();
+                    break;
             }
-        }
-        else if (matchesSleep) {
-            stateMachine.transition(stateObjects.Sleep);
-        }
-        else if (message.match(/.*wake.*/i)) {
-            if (stateMachine.currentState().shouldWake) {
-                stateMachine.currentState().shouldWake();
-            } else {
-                bot.chat("I'm not asleep!");
-            }
-        }
-        else if (message.match(/.*step.*/i)) {
-            const step = message.split("step ")[1];
-            stateMachine.transition(stateObjects.Step, { direction: step });
-        }
-        else if (message.match(/.*gunpowder.*/i)) {
-            const state = message.split("gunpowder ")[1]
-            const extras = state ? {
-                startState: stateObjects.Gunpowder.states[state]
-            } : {}
-            stateMachine.transition(stateObjects.Gunpowder, extras);
-        }
-        else if (message.match(/.*goto.*/i)) {
-            async function goTo() {
-                const waypoints = (await readMemory()).waypoints;
-                const args = message.split("goto ")[1]
-                const waypoint = waypoints[args]
-                if (waypoint && waypoint.d != bot.game.dimension) {
-                    bot.chat("Whoa! That's in the " + waypoint.d.replace("the_", "") + ", I'm in the " + bot.game.dimension.replace("the_", ""))
-                }
-                else if (waypoint) {
-                    stateMachine.transition(stateObjects.GoTo, { waypoint: waypoint });
-                    // bot.chat("On my way!")
-                }
-                else if (args.split(" ").length == 3) {
-                    const coords = args.split(" ");
-                    stateMachine.transition(stateObjects.GoTo, { x: coords[0], y: coords[1], z: coords[2] });
-                    // bot.chat("On my way!")
-                } else {
-                    bot.chat("I don't know how to get there!")
-                }
-            }
-            goTo()
-        }
-        else if (message.match(/.*take.*/i)) {
-            stateMachine.transition(stateObjects.Take);
-        }
-        else if (message.match(/.*dump.*/i)) {
-            stateMachine.transition(stateObjects.Dump);
-        }
-        else if (message.match(/.*up2.*/i)) {
-            bot.chat("My current task is to " + stateMachine.currentState().description())
-        }
-        else if (message.match(/.*@.*/i)) {
-            const p = bot.entity.position;
-            bot.chat("I'm at " + Math.round(p.x) + " " + Math.round(p.y) + " " + Math.round(p.z) + " in the " + bot.game.dimension.replace("the_", ""));
-        }
-        else if (message.match(/.*status.*/i)) {
-            bot.chat("I feel nothing!");
-        }
-        else if (message.match(/.*waypoints.*/i)) {
-            async function waypoints() {
-                const waypoints = (await readMemory()).waypoints;
-                for (const [key, value] of Object.entries(waypoints)) {
-                    const desc = value.description ? " -> " + value.description : ""
-                    bot.chat(key + desc + " at " + value.x + " " + value.y + " " + value.z + " in " + value.d.replace("_", " "));
-                    await bot.waitForTicks(20);
-                }
-            }
-            waypoints();
-        }
-        else if (message.match(/.*waypoint.*/i)) {
-            const args = message.split("waypoint ")[1].split(" ")
-            if (args.length < 3 || args.length > 5) {
-                bot.chat("Wrong number of arguments, try 'lb waypoint [name] [x] [y] [z] [overworld|the_nether|the_end]'")
-            } else {
-                const waypoint = {
-                    x: args[1],
-                    y: args[2],
-                    z: args[3],
-                    d: args[4] ?? "overworld"
-                }
-                updateMemory((memory) => {
-                    memory.waypoints[args[0]] = waypoint;
-                    return memory
-                })
-                bot.chat("Set waypoint " + args[0]);
-            }
-        }
-        else if (message.match(/.*help.*/i)) {
-            async function spitHelp() {
-                const text = `Lyrdl Bot commands:
-    lb follow -> make me follow you (WIP - cannot go through doors)
-    lb stop -> make me return to idle state
-    lb get in -> make me get in the nearest boat
-    lb get out -> make me get out of a boat
-    lb step [forward | back | left | right] -> make me take a step in the given direction
-    lb goto [x] [y] [z] -> make me head to the given coords
-    lb goto [waypoint] -> make me head to the given waypoint
-    lb waypoint [name] [x] [y] [z] [overworld | the_nether | the_end] -> save a waypoint with the given name coords and dimmension (see waypoints in "memory.json")
-    lb waypoints -> list all waypoints
-    lb sleep -> make me sleep in the nearest bed
-    lb wake -> make me wake up
-    lb take -> make me take all items from the nearest chest
-    lb dump -> make me dump all items in the nearest chest
-    lb gunpowder -> send me on a mission to collect gunpowder
-    lb @ -> ask for my location
-    lb up2 -> ask for my current task
-    lb status -> ask me how I'm feeling (WIP)
-    lb go die in a hole -> ask me to attempt to punch a hole straight down until I die (WIP)`
-                const lines = text.split("\n")
-                for (var i = 0; i < lines.length; i++) {
-                    bot.chat(lines[i]);
-                    await bot.waitForTicks(20);
-                }
-            }
-            spitHelp()
         }
     }
 }
@@ -1000,6 +947,10 @@ async function getGpt(lastTenMessages, status) {
             messages.push({ role: "user", content: message })
         }
     }
+    // I find appending this as a user message, ensures that answer follow the format.
+    messages.push({ role: "user", content: "Remember to only speak in JSON" })
+    messages.push({ role: "user", content: "Remember not to copy any of the examples, but to use novel language" })
+
     const chatCompletion = await openai.createChatCompletion({
         model: "gpt-3.5-turbo",
         messages: messages,
@@ -1011,8 +962,8 @@ async function getGpt(lastTenMessages, status) {
 
 async function getStatus(stateMachine, bot) {
     return {
-        health: bot.health,
-        foodSupply: bot.food,
+        health: `${bot.health}/20`,
+        foodSupply: `${bot.food}/20`,
         location: {
             x: bot.entity.position.x,
             y: bot.entity.position.y,

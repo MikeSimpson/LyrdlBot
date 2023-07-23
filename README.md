@@ -1,7 +1,51 @@
 # LyrdlBot
 ## Usage
-node lyrdlbot.js <SERVER_IP> <SERVER_PORT> <EMAIL_ADDRESS> <PASSWORD>
-## Lyrdl Bot commands:
+OPEN_AI_KEY=<OPEN_AI_KEY> node lyrdlbot.js <SERVER_IP> <SERVER_PORT> <EMAIL_ADDRESS> <PASSWORD>
+## How it works
+```mermaid
+graph TD
+    A(Minecraft)
+    E(LLM)
+    subgraph LyrdlBot
+      B(MineFlayer)
+      C(StateMachine)
+      D(Prompt)
+    end
+    D --> E
+    A <--> B
+    B -->|Events| C
+    B -->|Game State and Chats| D
+    C -->|Current State| D
+    C -->C
+    E -->|Command| C
+    E -->|Chat Message| B
+    C -->|Actions| B
+```
+LyrdlBot uses Mineflayer.js to communicate with the Minecraft server, it triggers in game actions and listens for what is happening in the game world.
+
+It notifies the StateMachine of any events in case that triggers a state transition e.g. the player has boarded a boat.
+
+It is the current state of the StateMachine that determines what the robot does in the Minecraft game e.g. attempting to board a boat.
+
+The StateMachine's current state, recent chat messages and various pieces of game data (health, location etc) are added to the core prompt (prompt.txt) sent to the LLM.
+
+The LLM, which is the gpt-3.5-turbo model from OpenAi will then return a JSON object containing command and a chat message. 
+
+The message is posted to Minecraft chat and the command is sent to the StateMachine.
+
+StateMachine example:
+```mermaid
+stateDiagram-v2
+    Idle --> Ride
+    Ride --> Idle
+    state Ride {
+        [*] --> Mounting
+        Mounting --> Riding : mount()
+        Riding --> Dismounting : shouldDismount()
+        Dismounting --> [*] : dismount()
+    }
+```
+Each state represents the current task of the robot, for example in the Ride state the robot mounts, rides and dismounts a vehicle. Ride has substates Mounting, Riding and Dismounting, these represents the steps in the Ride task. `mount()`, `dismount()` are events passed by Mineflayer. `shouldDismount()` is a command passed by the LLM model. The Mounting and Dismounting states interact with the game world to attempt to mount or dismount a boat.## Lyrdl Bot commands:
 - **lb follow** -> make me follow you (WIP - cannot go through doors)
 - **lb stop** -> make me return to idle state
 - **lb get in** -> make me get in the nearest boat

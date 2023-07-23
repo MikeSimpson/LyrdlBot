@@ -33,6 +33,8 @@ The LLM, which is the gpt-3.5-turbo model from OpenAi will then return a JSON ob
 
 The message is posted to Minecraft chat and the command is sent to the StateMachine.
 
+See `prompt.txt` for the full setup prompt.
+
 StateMachine example:
 ```mermaid
 stateDiagram-v2

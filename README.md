@@ -45,26 +45,25 @@ stateDiagram-v2
         Dismounting --> [*] : dismount()
     }
 ```
-Each state represents the current task of the robot, for example in the Ride state the robot mounts, rides and dismounts a vehicle. Ride has substates Mounting, Riding and Dismounting, these represents the steps in the Ride task. `mount()`, `dismount()` are events passed by Mineflayer. `shouldDismount()` is a command passed by the LLM model. The Mounting and Dismounting states interact with the game world to attempt to mount or dismount a boat.## Lyrdl Bot commands:
-- **lb follow** -> make me follow you (WIP - cannot go through doors)
-- **lb stop** -> make me return to idle state
-- **lb get in** -> make me get in the nearest boat
-- **lb get out** -> make me get out of a boat
-- **lb step [forward|back|left|right]** -> make me take a step in the given direction
-- **lb goto [x] [y] [z]** -> make me head to the given coords
-- **lb goto [waypoint]** -> make me head to the given waypoint
-- **lb waypoint [name] [x] [y] [z] [overworld|the_nether|the_end]** -> save a waypoint with the given name coords and dimension (see waypoints in "memory.json")
-- **lb sleep** -> make me sleep in the nearest bed
-- **lb wake** -> make me wake up
-- **lb take** -> make me take all items from the nearest chest
-- **lb dump** -> make me dump all items in the nearest chest
-- **lb gunpowder** -> send me on a mission to collect gunpowder
-- **lb @** -> ask for my location
-- **lb status** -> ask me how I'm feeling (WIP)
+Each state represents the current task of the robot, for example in the Ride state the robot mounts, rides and dismounts a vehicle. Ride has substates Mounting, Riding and Dismounting, these represents the steps in the Ride task. `mount()`, `dismount()` are events passed by Mineflayer. `shouldDismount()` is a command passed by the LLM model. The Mounting and Dismounting states interact with the game world to attempt to mount or dismount a boat.
+## Lyrdl Bot commands:
+Lyrdl Bot now runs an LLM so commands can be made in natural language. However, there are a finite number of commands that Lyrdl Bot itself is able to use to interact with Minecraft:
+- FOLLOW: make the robot follow the player named "username"
+- STOP: make the robot return to idle state
+- GET_IN: make the robot get in the nearest boat
+- GET_OUT: make the robot get out of a boat
+- STEP: make the robot take a step in the given direction (one of ["forward","back","left","right"])
+- GOTO: make the robot head to the given x y and z coordinates
+This command can optionally have a "waypoint" property in extras instead of coordinates
+- WAYPOINT: save a waypoint with the given name, coordinates, dimension (one of ["overworld","the_nether","the_end"]) and optional description.
+- SLEEP: make the robot sleep in the nearest bed
+- WAKE: make the robot sleep in the nearest bed
+- TAKE: make the robot take all items from the nearest chest
+- DUMP: make the robot deposit all items from the nearest chest
+- GUNPOWDER: send the robot on a multi step mission to collect gunpowder
+This command has an optional extra "state" which will continue the mission from a particular step
 ## On the roadmap:
 - Handle doors
 - Alphabetical item sorting
 - Activate mob switch
-- LLM interface
-- Report status including food supply
-- x z goto and waypoint coords
+- Set up camp command

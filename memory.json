@@ -41,6 +41,13 @@
             "z": "-26643",
             "dimension": "overworld",
             "description": "Where the peasants of Minland live"
+        },
+        "boat_road_cnr": {
+            "x": "106.21",
+            "y": "-2584.64",
+            "z": "-0.85",
+            "dimension": "the_nether",
+            "description": "the corner of the boat road"
         }
     }
 }

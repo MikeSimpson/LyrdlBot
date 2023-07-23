@@ -105,9 +105,9 @@ function createBot() {
         },
 
         Follow: {
-            description: function () { return "follow " + this.extras.targetName },
+            description: function () { return "follow " + this.extras.target },
             enter: async function () {
-                console.log("Entered Follow state with target: " + this.extras.targetName);
+                console.log("Entered Follow state with target: " + this.extras.target);
                 // bot.chat("I will follow!");
                 this.stateMachine.start(this.states.FollowStart);
             },
@@ -117,7 +117,7 @@ function createBot() {
                 // bot.chat("Stopped following!")
             },
             extras: {
-                targetName: null,
+                target: null,
             },
             movingFinished: function () {
                 // Transition back to start when moving has finished so that it can wait until target moves again
@@ -127,7 +127,7 @@ function createBot() {
             states: {
                 FollowStart: {
                     enter: async function () {
-                        const targetName = stateObjects.Follow.extras.targetName;
+                        const targetName = stateObjects.Follow.extras.target;
                         console.log("Entered FollowStart state with target: " + targetName);
 
                         const target = (targetName && bot.players[targetName]) ? bot.players[targetName].entity : null;
@@ -135,7 +135,7 @@ function createBot() {
                             await stateObjects.Follow.stateMachine.transition(stateObjects.Follow.states.FollowLost);
                         } else {
                             // Keep checking if target has moved away
-                            while (stateObjects.Follow.stateMachine.currentState() === this) { // todo test if we need to bring back the name property
+                            while (stateObjects.Follow.stateMachine.currentState() === this) {
                                 if (target.position.distanceTo(bot.entity.position) > 2) {
                                     await stateObjects.Follow.stateMachine.transition(stateObjects.Follow.states.Moving);
                                     break
@@ -151,7 +151,7 @@ function createBot() {
                 Moving: {
                     enter: async function () {
                         console.log("Entered Moving state");
-                        const targetName = stateObjects.Follow.extras.targetName
+                        const targetName = stateObjects.Follow.extras.target
                         const target = (targetName && bot.players[targetName]) ? bot.players[targetName].entity : null
                         if (!target) {
                             await stateObjects.Follow.stateMachine.transition(stateObjects.Follow.states.FollowLost);
@@ -168,7 +168,7 @@ function createBot() {
                     enter: async function () {
                         console.log("Entered FollowLost state");
                         bot.chat("I can\'t find you!")
-                        const targetName = stateObjects.Follow.extras.targetName;
+                        const targetName = stateObjects.Follow.extras.target;
 
                         // look for target
                         while (stateObjects.Follow.stateMachine.currentState() === this) {
@@ -345,7 +345,7 @@ function createBot() {
         Goto: {
             description: function () {
                 if (this.extras.waypoint) {
-                    return "go to " + this.extras.waypoint.description ?? this.extras.x + " " + this.extras.y + " " + this.extras.z
+                    return "go to " + this.extras.waypoint ?? this.extras.x + " " + this.extras.y + " " + this.extras.z
                 } else {
                     return "go to " + this.extras.x + " " + this.extras.y + " " + this.extras.z
                 }
@@ -353,16 +353,9 @@ function createBot() {
             enter: async function () {
                 const waypoints = (await readMemory()).waypoints;
                 const waypointObject = waypoints[this.extras.waypoint];
-                if (waypointObject && waypointObject.dimension != bot.game.dimension) {
-                    bot.chat("Whoa! That's in the " + waypointObject.d.replace("the_", "") + ", I'm in the " + bot.game.dimension.replace("the_", ""))
-                }
-                else if (waypointObject) {
-                    stateMachine.transition(stateObjects.Goto, { waypoint: waypointObject });
-                }
-
                 if (waypointObject) {
-                    if (waypointObject && waypointObject.dimension != bot.game.dimension) {
-                        bot.chat("Whoa! That's in the " + waypointObject.d.replace("the_", "") + ", I'm in the " + bot.game.dimension.replace("the_", ""))
+                    if (waypointObject.dimension != bot.game.dimension) {
+                        bot.chat("Whoa! That's in the " + waypointObject.dimension.replace("the_", "") + ", I'm in the " + bot.game.dimension.replace("the_", ""))
                     } else {
                         this.extras.x = waypointObject.x
                         this.extras.y = waypointObject.y
@@ -394,7 +387,8 @@ function createBot() {
             description: function () { return "collect gunpowder, I am currently " + this.stateMachine.currentState().description() },
             enter: async function () {
                 console.log("Entered Gunpowder state");
-                this.stateMachine.start(this.extras.startState ?? this.states.GunpowderStart);
+                const startState = this.extras.startState ? this.states[this.extras.startState] : this.states.GunpowderStart
+                this.stateMachine.start(startState);
             },
             exit: async function () {
                 console.log("Exited Gunpowder state");
@@ -527,7 +521,7 @@ function createBot() {
                         await bot.waitForTicks(5);
                         bot.setControlState("forward", false)
                         // wait until we hit the water?
-                        await bot.waitForTicks(30); // TODO test timing
+                        await bot.waitForTicks(30);
                         stateObjects.Gunpowder.stateMachine.transition(stateObjects.Gunpowder.states.GoToCollection, { direction: 'North' })
                     },
                     exit: async function () {
@@ -781,8 +775,7 @@ function createBot() {
             const status = await getStatus(stateMachine, bot);
             // console.log(JSON.stringify(status))
             if (message.match(/<.*> lb!.*/i)) {
-                // TODO JSONify bypass commands
-                processMessage(message);
+                processMessage(`{"command": "${message.split("lb! ")[1]}"}}`);
             } else {
                 try {
                     const content = (await getGpt(lastTenMessages, status)).content;
@@ -804,16 +797,16 @@ function createBot() {
 
     bot.on('end', createBot)
 
-    async function processMessage(message) {
-        if (message.message) {
-            bot.chat(message.message);
+    async function processMessage(response) {
+        if (response.message) {
+            bot.chat(response.message);
         }
-        const command = message.command
+        const command = response.command
         if (command) {
             switch (command) {
                 case "FOLLOW":
                     // TODO handle error and send LLM a message to correct it
-                    stateMachine.transition(stateObjects.Follow, command.extras);
+                    stateMachine.transition(stateObjects.Follow, response.extras);
                     break;
                 case "STOP":
                     // TODO Clear statestack
@@ -836,14 +829,13 @@ function createBot() {
                     }
                     break;
                 case "STEP":
-                    stateMachine.transition(stateObjects.Step, command.extras);
+                    stateMachine.transition(stateObjects.Step, response.extras);
                     break;
                 case "GUNPOWDER":
-                    //TODO parse state in gunpowder step
-                    stateMachine.transition(stateObjects.Gunpowder, command.extras);
+                    stateMachine.transition(stateObjects.Gunpowder, response.extras);
                     break;
                 case "GOTO":
-                    stateMachine.transition(stateObjects.Goto, command.extras);
+                    stateMachine.transition(stateObjects.Goto, response.extras);
                     break;
                 case "TAKE":
                     stateMachine.transition(stateObjects.Take);
@@ -852,17 +844,21 @@ function createBot() {
                     stateMachine.transition(stateObjects.Dump);
                     break;
                 case "WAYPOINT":
-                    const waypoint = {
-                        x: command.extras.x,
-                        y: command.extras.y,
-                        z: command.extras.z,
-                        dimension: command.extras.dimension,
-                        description: command.extras.description ?? ""
+                    try {
+                        const waypoint = {
+                            x: response.extras.x,
+                            y: response.extras.y,
+                            z: response.extras.z,
+                            dimension: response.extras.dimension,
+                            description: response.extras.description ?? ""
+                        }
+                        updateMemory((memory) => {
+                            memory.waypoints[response.extras.name] = waypoint;
+                            return memory
+                        })
+                    } catch (error){
+                        console.log(error)
                     }
-                    updateMemory((memory) => {
-                        memory.waypoints[command.extras.name] = waypoint;
-                        return memory
-                    })
                     break;
                 // For bypass commands
                 case "UP2":
@@ -942,14 +938,15 @@ async function getGpt(lastTenMessages, status) {
     ]
     for (const message of lastTenMessages) {
         if (message.match(/<L_Y_R_D_L>.*/)) {
-            messages.push({ role: "assistant", content: "[chat " + message.split("<L_Y_R_D_L> ")[1] + "]" })
+            messages.push({ role: "assistant", content: `{"message":"${message.split("<L_Y_R_D_L> ")[1]}"}`})
         } else {
             messages.push({ role: "user", content: message })
         }
     }
     // I find appending this as a user message, ensures that answer follow the format.
     messages.push({ role: "user", content: "Remember to only speak in JSON" })
-    messages.push({ role: "user", content: "Remember not to copy any of the examples, but to use novel language" })
+    messages.push({ role: "user", content: "Remember not to copy any of the example messages, but to use your own words" })
+    messages.push({ role: "user", content: "Remember to pass a value for 'command' when you are asked to do something" })
 
     const chatCompletion = await openai.createChatCompletion({
         model: "gpt-3.5-turbo",
@@ -962,14 +959,14 @@ async function getGpt(lastTenMessages, status) {
 
 async function getStatus(stateMachine, bot) {
     return {
-        health: `${bot.health}/20`,
-        foodSupply: `${bot.food}/20`,
+        efficiency: `${bot.health}/20`,
+        powerLevel: `${bot.food}/20`,
         location: {
             x: bot.entity.position.x,
             y: bot.entity.position.y,
             z: bot.entity.position.z,
             dimension: bot.game.dimension,
-        },
+        },todo all caps
         task: stateMachine.currentState() ? stateMachine.currentState().description() : "Booting up",
         waypoints: (await readMemory()).waypoints
     }

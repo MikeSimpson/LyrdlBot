@@ -856,7 +856,7 @@ function createBot() {
                             memory.waypoints[response.extras.name] = waypoint;
                             return memory
                         })
-                    } catch (error){
+                    } catch (error) {
                         console.log(error)
                     }
                     break;
@@ -938,20 +938,23 @@ async function getGpt(lastTenMessages, status) {
     ]
     for (const message of lastTenMessages) {
         if (message.match(/<L_Y_R_D_L>.*/)) {
-            messages.push({ role: "assistant", content: `{"message":"${message.split("<L_Y_R_D_L> ")[1]}"}`})
+            messages.push({ role: "assistant", content: `{"message":"${message.split("<L_Y_R_D_L> ")[1]}"}` })
         } else {
             messages.push({ role: "user", content: message })
         }
     }
     // I find appending this as a user message, ensures that answer follow the format.
-    messages.push({ role: "user", content: "Remember to only speak in JSON" })
-    messages.push({ role: "user", content: "Remember not to copy any of the example messages, but to use your own words" })
-    messages.push({ role: "user", content: "Remember to pass a value for 'command' when you are asked to do something" })
+    messages.push({ role: "system", content: "Remember not to copy any of the example messages, but to use your own words" })
+    messages.push({ role: "system", content: "Only use the functions you have been provided with." })
 
     const chatCompletion = await openai.createChatCompletion({
         model: "gpt-3.5-turbo",
         messages: messages,
+        functions: functions,
+        function_call: "auto",
+        max_tokens: 64,
     });
+    console.log(chatCompletion.data);
     const completion = chatCompletion.data.choices[0].message;
     console.log(completion);
     return completion;
@@ -966,7 +969,7 @@ async function getStatus(stateMachine, bot) {
             y: bot.entity.position.y,
             z: bot.entity.position.z,
             dimension: bot.game.dimension,
-        },todo all caps
+        },//todo all caps
         task: stateMachine.currentState() ? stateMachine.currentState().description() : "Booting up",
         waypoints: (await readMemory()).waypoints
     }
@@ -1033,3 +1036,144 @@ async function putAll(bot, chest, itemName) {
         }
     }
 }
+
+const functions = [
+    {
+        "name": "follow",
+        "description": "Make the robot follow the given player",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "username": {
+                    "type": "string",
+                    "description": "The username, e.g. Lyrdl"
+                }
+            },
+            "required": ["username"],
+        }
+    },
+    {
+        "name": "stop",
+        "description": "Make the robot return to idle state"
+    },
+    {
+        "name": "get_in",
+        "description": "Make the robot get in the nearest boat"
+    },
+    {
+        "name": "get_out",
+        "description": "Make the robot get out of a boat"
+    },
+    {
+        "name": "step",
+        "description": "Make the robot take a step in the given direction",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "direction": {
+                    "type": "string",
+                    "description": "The direction to step in",
+                    "enum": ["forward", "back", "left", "right"]
+                }
+            },
+            "required": ["direction"]
+        }
+    },
+    {
+        "name": "goto",
+        "description": "Make the robot pathfind to the given coordinates or waypoint name",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "coordinates": {
+                    "type": "object",
+                    "description": "The coordinates x y and z e.g. 0 0 0",
+                    "properties": {
+                        "x": {
+                            "type": "number",
+                            "description": "The coordinate on the x axis"
+                        },
+                        "y": {
+                            "type": "number",
+                            "description": "The coordinate on the y axis"
+                        },
+                        "z": {
+                            "type": "number",
+                            "description": "The coordinate on the z axis"
+                        }
+                    }
+                },
+                "waypoint": {
+                    "type": "string",
+                    "description": "The name of the waypoint e.g. origin"
+                }
+            }
+        }
+    },
+    {
+        "name": "save_waypoint",
+        "description": "Save a waypoint with the given name, coordinates, dimension and description",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "coordinates": {
+                    "type": "object",
+                    "description": "The coordinates x y and z e.g. 0 0 0",
+                    "properties": {
+                        "x": {
+                            "type": "number",
+                            "description": "The coordinate on the x axis"
+                        },
+                        "y": {
+                            "type": "number",
+                            "description": "The coordinate on the y axis"
+                        },
+                        "z": {
+                            "type": "number",
+                            "description": "The coordinate on the z axis"
+                        }
+                    }
+                },
+                "name": {
+                    "type": "string",
+                    "description": "The name of the waypoint e.g. origin"
+                },
+                "dimension": {
+                    "type": "string",
+                    "description": "The Minecraft dimension",
+                    "enum": ["overworld", "the_nether", "the_end"]
+                }
+            },
+            "required": ["coordinates", "name", "dimension"]
+        }
+    },
+    {
+        "name": "sleep",
+        "description": "Make the robot sleep in the nearest bed"
+    },
+    {
+        "name": "wake",
+        "description": "Make the robot wake up"
+    },
+    {
+        "name": "take",
+        "description": "Make the robot take all items from the nearest chest"
+    },
+    {
+        "name": "deposit",
+        "description": "Make the robot deposit all items from the nearest chest"
+    },
+    {
+        "name": "collect_gunpowder",
+        "description": "Send the robot on a multi step mission to collect gunpowder",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "step": {
+                    "type": "string",
+                    "description": "The step of the mission to skip to (optional)"
+                }
+            }
+        }
+    }
+]

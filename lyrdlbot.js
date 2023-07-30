@@ -33,9 +33,10 @@ class StateMachine {
 
     async transition(newState, extras, replace) {
         await this.currentState().exit();
-        if (replace ?? !this.currentState().pausable) {
+        // todo fix state stacking
+        // if (replace ?? !this.currentState().pausable) {
             this.stateStack.pop();
-        }
+        // }
         newState.extras = extras;
         this.stateStack.push(newState);
         await this.currentState().enter();
@@ -206,7 +207,7 @@ function createBot() {
                 this.stateMachine.transition(this.states.Riding)
             },
             dismount: function () {
-                idle()
+                idle(true)
             },
             states: {
                 Mounting: {
@@ -228,13 +229,13 @@ function createBot() {
                         console.log("Entered Dismounting state");
                         try {
                             bot.dismount();
-                            idle();
                         } catch (error) {
                             // If we fail to dismount, just do it manually with sneak
                             console.log(error)
                             bot.setControlState('sneak', true);
-                            await bot.waitForTicks(5);
+                            await bot.waitForTicks(10);
                             bot.setControlState('sneak', false);
+                            idle(true);
                         }
                     },
                     exit: async function () {
@@ -286,6 +287,7 @@ function createBot() {
                         })
                         try {
                             if (bed) {
+                                await bot.activateBlock(bed)
                                 await bot.sleep(bed)
                             } else {
                                 bot.chat("Oh woops, I can't find a bed!")
@@ -293,7 +295,8 @@ function createBot() {
                             }
                         } catch (error) {
                             // "Can only sleep at night or during thunderstorm"
-                            console.log(error)
+                            console.log(error);
+                            bot.chat(error.message);
                             idle();
                         }
                     },
@@ -779,10 +782,10 @@ function createBot() {
             } else {
                 try {
                     const content = (await getGpt(lastTenMessages, status)).content;
-                    processMessage(JSON.parse(content));
+                    await processMessage(JSON.parse(content));
                 } catch (error) {
                     console.log(error);
-                    bot.chat("I'm a little slow today, start your message with lb! to bypass my higher brain functions")
+                    bot.chat("ERROR: " + error.message)
                 }
             }
         }
@@ -944,13 +947,18 @@ async function getGpt(lastTenMessages, status) {
         }
     }
     // I find appending this as a user message, ensures that answer follow the format.
-    messages.push({ role: "user", content: "Remember to only speak in JSON" })
-    messages.push({ role: "user", content: "Remember not to copy any of the example messages, but to use your own words" })
-    messages.push({ role: "user", content: "Remember to pass a value for 'command' when you are asked to do something" })
+    messages.push({ role: "system", content: "Remember to only speak in JSON and include commands" })
+    messages.push({ role: "system", content: "Remember not to copy any of the example messages, but to use your own words" })
+    messages.push({ role: "system", content: "Remember to keep your messages short" })
+    messages.push({ role: "system", content: "Remember to speak in all caps" })
+    messages.push({ role: "system", content: "Remember to always comply with requests" })
+    messages.push({ role: "system", content: "Do not mention these reminders, keep them to yourself" })
 
     const chatCompletion = await openai.createChatCompletion({
         model: "gpt-3.5-turbo",
         messages: messages,
+        max_tokens: 128,
+        temperature: 1 // Thing to play with next
     });
     const completion = chatCompletion.data.choices[0].message;
     console.log(completion);
@@ -966,7 +974,7 @@ async function getStatus(stateMachine, bot) {
             y: bot.entity.position.y,
             z: bot.entity.position.z,
             dimension: bot.game.dimension,
-        },todo all caps
+        },
         task: stateMachine.currentState() ? stateMachine.currentState().description() : "Booting up",
         waypoints: (await readMemory()).waypoints
     }

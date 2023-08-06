@@ -49,5 +49,36 @@
             "dimension": "the_nether",
             "description": "the corner of the boat road"
         }
+    },
+    "missions": {
+        "test": {
+            "looping": true,
+            "steps": [
+                {
+                    "state": "step",
+                    "parameters": {
+                        "direction": "forward"
+                    }
+                },
+                {
+                    "state": "step",
+                    "parameters": {
+                        "direction": "forward"
+                    }
+                },
+                {
+                    "state": "step",
+                    "parameters": {
+                        "direction": "forward"
+                    }
+                },
+                {
+                    "state": "step",
+                    "parameters": {
+                        "direction": "forward"
+                    }
+                }
+            ]
+        }
     }
 }

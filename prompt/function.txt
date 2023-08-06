@@ -19,6 +19,10 @@ These are the available functions:
     "description": "Do nothing",
 },
 {
+    "name": "chat",
+    "description": "Chat to a player",
+},
+{
     "name": "follow",
     "description": "Make the robot follow the given player",
     "parameters": {

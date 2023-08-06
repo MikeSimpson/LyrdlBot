@@ -1,5 +1,6 @@
 
 const { getStatus } = require('./util');
+const { StateMachine, states } = require('./state-machine');
 
 const functions = [
     {
@@ -8,6 +9,10 @@ const functions = [
         "parameters": {
             "description": "The request"
         }
+    },
+    {
+        "name": "chat",
+        "description": "Chat to a player",
     },
     {
         "name": "nothing",
@@ -202,9 +207,9 @@ async function processFunction(response, stateMachine, bot) {
         case "step":
             stateMachine.transition(states.Step, response.parameters);
             break;
-        case "gunpowder":
+        case "collect_gunpowder":
             stateMachine.clear();
-            stateMachine.transition(states.Gunpowder, response.parameters);
+            stateMachine.transition(states.Gunpowder, response.parameters ?? {});
             break;
         case "mission":
             stateMachine.clear();

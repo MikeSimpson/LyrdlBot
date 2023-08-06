@@ -10,7 +10,7 @@ const openai = new OpenAIApi(configuration);
 
 async function getFunctionResponse(lastTenMessages) {
     const messages = [
-        { role: "system", content: await readPrompt('../prompt/function.txt') }
+        { role: "system", content: await readPrompt('prompt/function.txt') }
     ]
 
     for (const example of chatExamples) {
@@ -39,7 +39,7 @@ async function getFunctionResponse(lastTenMessages) {
 
 async function getChatResponse(lastTenMessages) {
     const messages = [
-        { role: "system", content: await readPrompt('../prompt/chat.txt') }
+        { role: "system", content: await readPrompt('prompt/chat.txt') }
     ]
     for (const example of chatExamples) {
         messages.push({ role: "user", content: example.message})

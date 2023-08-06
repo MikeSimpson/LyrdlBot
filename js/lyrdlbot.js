@@ -2,9 +2,9 @@ const mineflayer = require('mineflayer');
 const pathfinder = require('mineflayer-pathfinder').pathfinder;
 const autoeat = require('mineflayer-auto-eat').plugin;
 const { StateMachine, states } = require('./state-machine');
-const { processFunction, getStatus } = require('./functions');
+const { processFunction } = require('./functions');
 const { getFunctionResponse, getChatResponse } = require('./gpt');
-const { log, prompt } = require('./util');
+const { log, prompt, getStatus } = require('./util');
 
 // Auth options from command line arguments
 const options = {
@@ -70,27 +70,27 @@ function createBot() {
 
     bot.on('mount', () => {
         if (stateMachine.currentState() && stateMachine.currentState().mount) {
-            stateMachine.currentState().mount()
+            stateMachine.currentState().mount(stateMachine, bot)
         } else {
-            bot.dismount();
+            bot.dismount(stateMachine, bot);
         }
     })
 
     bot.on('dismount', () => {
         if (stateMachine.currentState() && stateMachine.currentState().dismount) {
-            stateMachine.currentState().dismount()
+            stateMachine.currentState().dismount(stateMachine, bot)
         }
     })
 
     bot.on('sleep', () => {
         if (stateMachine.currentState().sleep) {
-            stateMachine.currentState().sleep()
+            stateMachine.currentState().sleep(stateMachine, bot)
         }
     })
 
     bot.on('wake', () => {
         if (stateMachine.currentState().wake) {
-            stateMachine.currentState().wake()
+            stateMachine.currentState().wake(stateMachine, bot)
         }
     })
 
@@ -110,8 +110,14 @@ function createBot() {
                 var attempts = 3;
                 while(attempts > 0){
                     try {
-                        const command = (await getFunctionResponse(lastTenMessages)).content;
-                        processFunction(JSON.parse(command), stateMachine, bot);
+                        if(message.match(/<Lyrdl>.*/)){
+                            var functionMessages = lastTenMessages
+                            if(attempts != 3){
+                                functionMessages.push("Remember to only reply with JSON")
+                            }
+                            const command = (await getFunctionResponse(functionMessages)).content;
+                            processFunction(JSON.parse(command), stateMachine, bot);
+                        }
                         const chat = (await getChatResponse(lastTenMessages, status)).content;
                         bot.chat(chat);
                         attempts = 0;

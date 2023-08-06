@@ -1,3 +1,5 @@
+const mineflayer = require('mineflayer');
+const pathfinder = require('mineflayer-pathfinder').pathfinder;
 const Movements = require('mineflayer-pathfinder').Movements;
 const { GoalNear } = require('mineflayer-pathfinder').goals;
 const fileStream = require('fs');
@@ -67,7 +69,7 @@ async function putAll(bot, chest, itemName) {
 // Prepend time stamp and write message to log file and console
 const log = (message) => {
     let stampedMessage = `${new Date().toLocaleString("en-UK")}: ${message}\n`;
-    fileStream.appendFile('../logs.txt', stampedMessage, function (err) {
+    fileStream.appendFile('logs.txt', stampedMessage, function (err) {
         if (err) throw err;
     });
     console.log(stampedMessage);
@@ -87,7 +89,7 @@ const prompt = (bot) => {
 }
 
 async function readMemory() {
-    const data = fileStream.readFileSync('../memory.json', 'utf-8', callback_function = function (err) {
+    const data = fileStream.readFileSync('memory.json', 'utf-8', callback_function = function (err) {
         if (err) throw err;
     })
     const memory = JSON.parse(data)
@@ -95,10 +97,10 @@ async function readMemory() {
 }
 
 function updateMemory(update) {
-    fileStream.readFile('../memory.json', 'utf-8', callback_function = function (err, data) {
+    fileStream.readFile('memory.json', 'utf-8', callback_function = function (err, data) {
         if (err) throw err;
         const memory = JSON.parse(data)
-        fileStream.writeFile('../memory.json', JSON.stringify(update(memory)), function (err) {
+        fileStream.writeFile('memory.json', JSON.stringify(update(memory)), function (err) {
             if (err) throw err;
         })
 

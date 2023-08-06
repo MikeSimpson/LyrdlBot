@@ -55,27 +55,27 @@
             "looping": true,
             "steps": [
                 {
-                    "state": "step",
+                    "state": "Step",
                     "parameters": {
                         "direction": "forward"
                     }
                 },
                 {
-                    "state": "step",
+                    "state": "Step",
                     "parameters": {
-                        "direction": "forward"
+                        "direction": "left"
                     }
                 },
                 {
-                    "state": "step",
+                    "state": "Step",
                     "parameters": {
-                        "direction": "forward"
+                        "direction": "back"
                     }
                 },
                 {
-                    "state": "step",
+                    "state": "Step",
                     "parameters": {
-                        "direction": "forward"
+                        "direction": "right"
                     }
                 }
             ]

@@ -1,4 +1,7 @@
 const Vec3 = require('vec3').Vec3;
+const mineflayer = require('mineflayer');
+const pathfinder = require('mineflayer-pathfinder').pathfinder;
+const { move, putAll, takeAll, readMemory  } = require('./util');
 
 // A class to hold the current state and handle state transitions
 class StateMachine {
@@ -20,7 +23,6 @@ class StateMachine {
 
     async transition(newState, extras) {
         await this.currentState().exit(this, this.bot);
-        this.stateStack.pop();
         newState.extras = extras;
         newState.stateMachine = new StateMachine(this.bot);
         this.stateStack.push(newState);
@@ -29,7 +31,7 @@ class StateMachine {
 
     async clear() {
         await this.currentState().exit(this, this.bot);
-        this.stateStack = [];
+        this.stateStack = [states.Idle];
     }
 
     async push(newState, extras) {
@@ -41,6 +43,9 @@ class StateMachine {
     async pop() {
         await this.currentState().exit(this, this.bot);
         this.stateStack.pop();
+        if(!this.currentState()){
+            this.stateStack.push(states.Idle);
+        }
         if (this.currentState().resume) {
             await this.currentState().resume();
         } else {
@@ -51,7 +56,8 @@ class StateMachine {
 
 const states = {
     Idle: {
-        description: function () { return "chill" },
+        name: "idle",
+        description: function () { return "chill" },//todo need to rework states to be objects
         enter: async function (stateMachine, bot) {
             console.log("Entered Idle state");
 
@@ -74,6 +80,7 @@ const states = {
     },
 
     Follow: {
+        name: "follow",
         description: function () { return "follow " + this.extras.username },
         enter: async function (stateMachine, bot) {
             console.log("Entered Follow state with target: " + this.extras.username);
@@ -157,6 +164,7 @@ const states = {
     },
 
     Ride: {
+        name: "ride",
         description: function () { return "ride a boat" },
         enter: async function (stateMachine, bot) {
             console.log("Entered Ride state");
@@ -167,14 +175,14 @@ const states = {
             this.stateMachine.currentState().exit();
         },
         stateMachine: null,
-        shouldDismount: function (stateMachine, bot) {
+        shouldDismount: async function (stateMachine, bot) {
             this.stateMachine.transition(this.states.Dismounting)
         },
-        mount: function (stateMachine, bot) {
+        mount: async function (stateMachine, bot) {
             this.stateMachine.transition(this.states.Riding)
         },
-        dismount: function (stateMachine, bot) {
-            stateMachine.pop();
+        dismount: async function (stateMachine, bot) {
+            await stateMachine.pop();
         },
         states: {
             Mounting: {
@@ -196,7 +204,7 @@ const states = {
                     console.log("Entered Dismounting state");
                     try {
                         bot.dismount();
-                        stateMachine.pop();
+                        await stateMachine.pop();
                     } catch (error) {
                         // If we fail to dismount, just do it manually with sneak
                         console.log(error)
@@ -223,6 +231,7 @@ const states = {
     },
 
     Sleep: {
+        name: "sleep",
         description: function () { return "sleep" },
         enter: async function (stateMachine, bot) {
             console.log("Entered Sleep state");
@@ -233,14 +242,14 @@ const states = {
             this.stateMachine.currentState().exit();
         },
         stateMachine: null,
-        shouldWake: function (stateMachine, bot) {
+        shouldWake: async function (stateMachine, bot) {
             this.stateMachine.transition(this.states.WakeUp);
         },
-        sleep: function (stateMachine, bot) {
+        sleep: async function (stateMachine, bot) {
             this.stateMachine.transition(this.states.Sleeping);
         },
-        wake: function (stateMachine, bot) {
-            stateMachine.pop();
+        wake: async function (stateMachine, bot) {
+            await stateMachine.pop();
         },
         states: {
             SleepStart: {
@@ -257,7 +266,7 @@ const states = {
                             await bot.sleep(bed)
                         } else {
                             bot.chat("Oh woops, I can't find a bed!")
-                            stateMachine.pop();
+                            await stateMachine.pop();
                         }
                     } catch (error) {
                         // "Can only sleep at night or during thunderstorm"
@@ -292,6 +301,7 @@ const states = {
     },
 
     Step: {
+        name: "step",
         description: function () { return "step " + this.extras.direction },
         enter: async function (stateMachine, bot) {
             console.log("Entered Step state with direction: " + this.extras.direction);
@@ -299,7 +309,7 @@ const states = {
             bot.setControlState(this.extras.direction, true)
             await bot.waitForTicks(5)
             bot.setControlState(this.extras.direction, false)
-            stateMachine.pop();
+            await stateMachine.pop();
         },
         exit: async function (stateMachine, bot) {
             console.log("Exited Step state");
@@ -310,6 +320,7 @@ const states = {
     },
 
     Goto: {
+        name: "goto",
         description: function () {
             if (this.extras.waypoint) {
                 return "go to " + this.extras.waypoint ?? this.extras.coordinates.x + " " + this.extras.coordinates.y + " " + this.extras.coordinates.z
@@ -343,25 +354,26 @@ const states = {
             z: null,
             waypoint: null
         },
-        movingFinished: function (stateMachine, bot) {
-            stateMachine.pop();
+        movingFinished: async function (stateMachine, bot) {
+            await stateMachine.pop();
         }
     },
 
     // Collect and store gunpowder from farm
     Gunpowder: {
+        name: "gunpowder",
         description: function () { return "collect gunpowder, I am currently " + this.stateMachine.currentState().description() },
         enter: async function (stateMachine, bot) {
             console.log("Entered Gunpowder state");
-            const startState = this.extras.startState ? this.states[this.extras.startState] : this.states.GunpowderStart
+            const startState = this.extras.step ? this.states[this.extras.step] : this.states.GunpowderStart
             this.stateMachine.start(startState);
         },
         exit: async function (stateMachine, bot) {
             console.log("Exited Gunpowder state");
-            this.stateMachine.currentState().exit();
+            this.stateMachine.currentState().exit(this.stateMachine, bot);
         },
         extras: {
-            startState: null
+            step: null
         },
         resume: async function (stateMachine, bot) {
             console.log("Resumed Gunpowder state");
@@ -403,7 +415,7 @@ const states = {
                     // Establish initial conditions, either accept them and navigate to starting point or inform user that I need to be relocated
                     if (bot.game.dimension != "the_nether") {
                         bot.chat("I need to be in the nether to start this mission!");
-                        stateMachine.pop();
+                        await stateMachine.pop();
                     } else {
                         states.Gunpowder.stateMachine.transition(states.Gunpowder.states.FungustusHubToSpawn);
                     }
@@ -625,6 +637,7 @@ const states = {
     },
 
     Take: {
+        name: "take",
         description: function () { return "take items from a chest" },
         enter: async function (stateMachine, bot) {
             console.log("Entered Take");
@@ -634,7 +647,7 @@ const states = {
                 maxDistance: 6
             })
             await takeAll(bot, chest);
-            stateMachine.pop();
+            await stateMachine.pop();
         },
         exit: async function (stateMachine, bot) {
             console.log("Exited Take state");
@@ -642,6 +655,7 @@ const states = {
     },
 
     Dump: {
+        name: "dump",
         description: function () { return "dump items in a chest" },
         enter: async function (stateMachine, bot) {
             console.log("Entered Dump");
@@ -651,7 +665,7 @@ const states = {
                 maxDistance: 6
             })
             await putAll(bot, chest);
-            stateMachine.pop();
+            await stateMachine.pop();
         },
         exit: async function (stateMachine, bot) {
             console.log("Exited Dump state");
@@ -659,6 +673,7 @@ const states = {
     },
 
     Mission: {
+        name: "mission",
         description: function () { return "doing the " + this.extras.missionName + " mission" },
         enter: async function (stateMachine, bot) {
             console.log("Entered Mission " + this.extras.missionName);
@@ -668,8 +683,9 @@ const states = {
             if(mission.looping){
                 stateMachine.push(states.Mission, this.extras);
             }
-            for (const step in mission.steps){
-                stateMachine.push(step.state, step.parameters);
+            for (const step of mission.steps){
+                console.log("Pushing " + JSON.stringify(step))
+                await stateMachine.push(states[step.state], step.parameters);
             }
             // start mission
             await stateMachine.currentState().enter(stateMachine, bot);

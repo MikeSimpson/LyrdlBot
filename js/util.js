@@ -2,7 +2,6 @@ const Movements = require('mineflayer-pathfinder').Movements;
 const { GoalNear } = require('mineflayer-pathfinder').goals;
 const fileStream = require('fs');
 
-
 async function move(bot, position, range) {
     const defaultMove = new Movements(bot)
     defaultMove.canDig = false

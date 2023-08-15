@@ -17,7 +17,7 @@ async function getFunctionResponse(lastTenMessages) {
         messages.push({ role: "user", content: example.message})
         messages.push({ role: "assistant", content: example.function})
     }
-    messages.push({ role: "user", content: "Remember to only use the functions provided to you" })
+    messages.push({ role: "user", content: "Remember to only use the functions provided to you and respond only with JSON" })
     for (const message of lastTenMessages) {
         if (message.match(/<L_Y_R_D_L>.*/)) {
             messages.push({ role: "system", content: `${message.split("<L_Y_R_D_L> ")[1]}`})
@@ -37,20 +37,24 @@ async function getFunctionResponse(lastTenMessages) {
     return completion;
 }
 
-async function getChatResponse(lastTenMessages) {
+async function getChatResponse(lastTenMessages, commandResponse) {
     const messages = [
         { role: "system", content: await readPrompt('prompt/chat.txt') }
     ]
     for (const example of chatExamples) {
-        messages.push({ role: "user", content: example.message})
-        messages.push({ role: "assistant", content: example.response})
+        messages.push({ role: "user", content: example.message});
+        messages.push({ role: "assistant", content: example.response});
     }
     for (const message of lastTenMessages) {
         if (message.match(/<L_Y_R_D_L>.*/)) {
             messages.push({ role: "assistant", content: `${message.split("<L_Y_R_D_L> ")[1]}`})
         } else {
-            messages.push({ role: "user", content: message})
+            messages.push({ role: "user", content: message});
         }
+    }
+
+    if(commandResponse){
+        messages.push({role: "system", content: "The outcome of your most recent command was: " + commandResponse + " You should inform the player about this result"});
     }
 
     const chatCompletion = await openai.createChatCompletion({

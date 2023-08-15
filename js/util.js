@@ -28,7 +28,7 @@ async function takeAll(bot, chestBlock) {
     async function withdrawItem(item, amount) {
         if (item) {
             try {
-                await window.withdraw(item.type, null, amount)
+                await window.withdraw(item.type, null, amount, null)
                 console.log(`withdrew ${amount} ${item.name}`)
             } catch (err) {
                 console.log(`unable to withdraw ${amount} ${item.name}`)
@@ -118,7 +118,7 @@ async function getStatus(stateMachine, bot) {
             dimension: bot.game.dimension,
         },
         task: stateMachine.currentState() ? stateMachine.currentState().description() : "Booting up",
-        waypoints: (await readMemory()).waypoints
+        // waypoints: (await readMemory()).waypoints
     }
 }
 

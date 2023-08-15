@@ -1,7 +1,8 @@
 const mineflayer = require('mineflayer');
 const pathfinder = require('mineflayer-pathfinder').pathfinder;
 const autoeat = require('mineflayer-auto-eat').plugin;
-const { StateMachine, states } = require('./state-machine');
+const { StateMachine } = require('./state-machine');
+const { Idle } = require('./states/idle');
 const { processFunction } = require('./functions');
 const { getFunctionResponse, getChatResponse } = require('./gpt');
 const { log, prompt, getStatus } = require('./util');
@@ -27,7 +28,7 @@ function createBot() {
     const stateMachine = new StateMachine(bot)
 
     bot.once('spawn', () => {
-        stateMachine.start(states.Idle);
+        stateMachine.start(new Idle());
         prompt(bot);
         bot.autoEat.options = {
             priority: 'foodPoints',
@@ -103,26 +104,28 @@ function createBot() {
             lastTenMessages.shift();
         }
         async function handleChat() {
-            const status = await getStatus(stateMachine, bot);
             if (message.match(/<.*> lb!.*/i)) {
                 // TODO
             } else {
                 var attempts = 3;
                 while(attempts > 0){
                     try {
+                        let commandResponse = null;
                         if(message.match(/<Lyrdl>.*/)){
-                            var functionMessages = lastTenMessages
+                            var functionMessages = lastTenMessages.slice();
                             if(attempts != 3){
-                                functionMessages.push("Remember to only reply with JSON")
+                                functionMessages.push("Remember to only reply with known JSON functions")
                             }
                             const command = (await getFunctionResponse(functionMessages)).content;
-                            processFunction(JSON.parse(command), stateMachine, bot);
+                            commandResponse = await processFunction(JSON.parse(command), stateMachine, bot);
+                            console.log(commandResponse);
                         }
-                        const chat = (await getChatResponse(lastTenMessages, status)).content;
+                        const chat = (await getChatResponse(lastTenMessages, commandResponse)).content;
                         bot.chat(chat);
                         attempts = 0;
                     } catch (error) {
                         console.log(error);
+                        console.log("Error processing chat");
                         attempts -= 1;
                     }
                 }

@@ -65,7 +65,7 @@ function createBot() {
     bot.on('goal_reached', () => {
         console.log('goal_reached')
         if (stateMachine.currentState().movingFinished) {
-            stateMachine.currentState().movingFinished()
+            stateMachine.currentState().movingFinished(stateMachine, bot)
         }
     })
 

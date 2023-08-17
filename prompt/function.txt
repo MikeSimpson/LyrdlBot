@@ -98,7 +98,7 @@ These are the available functions:
         "properties": {
             "coordinates": {
                 "type": "object",
-                "description": "The coordinates x y and z e.g. 0 0 0",
+                "description": "The coordinates x y and z. Set to null to use current coordinates",
                 "properties": {
                     "x": {
                         "type": "number",
@@ -124,7 +124,7 @@ These are the available functions:
                 "enum": ["overworld", "the_nether", "the_end"]
             }
         },
-        "required": ["coordinates", "name", "dimension"]
+        "required": ["name", "dimension"]
     }
 },
 {
@@ -137,21 +137,48 @@ These are the available functions:
 },
 {
     "name": "take",
-    "description": "Make the robot take all items from the nearest chest"
-},
-{
-    "name": "deposit",
-    "description": "Make the robot deposit all items from the nearest chest"
-},
-{
-    "name": "collect_gunpowder",
-    "description": "Send the robot on a multi step mission to collect gunpowder",
+    "description": "Make the robot take all items from the nearest chest",
     "parameters": {
         "type": "object",
         "properties": {
-            "step": {
+            "regex": {
                 "type": "string",
-                "description": "The step of the mission to skip to (optional)"
+                "description": "A regular expression to filter by item name"
+            },
+            "position": {
+                "type": "object",
+                "description": "The coordinates x y and z of the chest. Optional",
+                "properties": {
+                    "x": {
+                        "type": "number",
+                        "description": "The coordinate on the x axis"
+                    },
+                    "y": {
+                        "type": "number",
+                        "description": "The coordinate on the y axis"
+                    },
+                    "z": {
+                        "type": "number",
+                        "description": "The coordinate on the z axis"
+                    }
+                }
+            }
+        }
+    }
+},
+{
+    "name": "deposit",
+    "description": "Make the robot deposit all items from the nearest chest",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "regex": {
+                "type": "string",
+                "description": "A regular expression to filter by item name"
+            },
+            "to": {
+                "type": "string",
+                "description": "The name of the chest to put items into"
             }
         }
     }

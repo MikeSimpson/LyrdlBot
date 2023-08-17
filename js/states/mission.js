@@ -26,7 +26,7 @@ class Mission {
         if (mission.looping) {
             stateMachine.push(new Mission(this.extras));
         }
-        for (const step of mission.steps) {
+        for (const step of mission.steps.reverse()) {
             console.log("Pushing " + JSON.stringify(step))
             await stateMachine.push(this.getState(step.state, step.parameters));
         }
@@ -45,8 +45,24 @@ class Mission {
 
     getState(name, extras) {
         switch (name) {
+            case "Follow":
+                return new Follow(extras);
+            case "Idle":
+                return new Idle(extras);
+            case "Ride":
+                return new Ride(extras);
+            case "Sleep":
+                return new Sleep(extras);
             case "Step":
                 return new Step(extras);
+            case "Deposit":
+                return new Deposit(extras);
+            case "Take":
+                return new Take(extras);
+            case "Wait":
+                return new Wait(extras);
+            case "Goto":
+                return new Goto(extras);
         }
     }
 }

@@ -49,10 +49,6 @@ async function processFunction(command, stateMachine, bot) {
             stateMachine.transition(new Step(command.parameters));
             response = "Stepping";
             break;
-        case "collect_gunpowder":
-            stateMachine.clear();
-            stateMachine.transition(states.Gunpowder, command.parameters ?? {});
-            break;
         case "mission":
             stateMachine.clear();
             stateMachine.transition(new Mission(command.parameters));
@@ -64,11 +60,11 @@ async function processFunction(command, stateMachine, bot) {
             response = "Going to  " + (command.parameters.waypoint ?? "coordinates");
             break;
         case "take":
-            stateMachine.transition(new Take());
+            stateMachine.transition(new Take(command.parameters));
             response = "Taking";
             break;
         case "deposit":
-            stateMachine.transition(new Deposit());
+            stateMachine.transition(new Deposit(command.parameters));
             response = "Depositing";
             break;
         case "wait":
@@ -77,11 +73,12 @@ async function processFunction(command, stateMachine, bot) {
             break;
         case "save_waypoint":
             try {
+                const coordinates = command.parameters.coordinates ? command.parameters.coordinates : bot.entity.position;
                 const waypoint = {
-                    x: command.parameters.coordinates.x,
-                    y: command.parameters.coordinates.y,
-                    z: command.parameters.coordinates.z,
-                    dimension: command.parameters.dimension,
+                    x: coordinates.x,
+                    y: coordinates.y,
+                    z: coordinates.z,
+                    dimension: command.parameters.dimension, //todo
                     description: command.parameters.description ?? ""
                 }
                 updateMemory((memory) => {

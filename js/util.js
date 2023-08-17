@@ -8,6 +8,7 @@ async function move(bot, position, range) {
     const defaultMove = new Movements(bot)
     defaultMove.canDig = false
     defaultMove.allow1by1towers = false
+    defaultMove.placeCost = 1000000
     defaultMove.allowFreeMotion = true
 
     // Start following the target
@@ -15,12 +16,14 @@ async function move(bot, position, range) {
     bot.pathfinder.setGoal(new GoalNear(position.x, position.y, position.z, range ?? 1))
 }
 
-async function takeAll(bot, chestBlock) {
+async function takeAll(bot, chestBlock, regex) {
 
     const window = await bot.openContainer(chestBlock)
 
     for (const item of window.containerItems()) {
-        await withdrawItem(item, item.count)
+        if (!regex || item.name.match(new RegExp(regex))) {
+            await withdrawItem(item, item.count)
+        }
     }
 
     window.close()
@@ -40,12 +43,12 @@ async function takeAll(bot, chestBlock) {
 }
 
 // Put everything not in the hotbar into target chest
-async function putAll(bot, chest, itemName) {
+async function putAll(bot, chest, regex) {
 
     const window = await bot.openContainer(chest)
 
     for (const item of window.items()) {
-        if (!itemName || item.name == itemName) {
+        if (!regex || item.name.match(new RegExp(regex))) {
             await depositItem(item, item.count)
         }
     }
@@ -109,12 +112,12 @@ function updateMemory(update) {
 
 async function getStatus(stateMachine, bot) {
     return {
-        efficiency: `${bot.health}/20`,
+        efficiency: ((bot.health / 20) * 100).toFixed(2),
         powerLevel: `${bot.food}/20`,
         location: {
-            x: bot.entity.position.x,
-            y: bot.entity.position.y,
-            z: bot.entity.position.z,
+            x: bot.entity.position.x.toFixed(2),
+            y: bot.entity.position.y.toFixed(2),
+            z: bot.entity.position.z.toFixed(2),
             dimension: bot.game.dimension,
         },
         task: stateMachine.currentState() ? stateMachine.currentState().description() : "Booting up",

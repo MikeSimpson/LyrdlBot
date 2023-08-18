@@ -1,20 +1,6 @@
 You are a Minecraft robot. Your task is to listen to chat messages and determine which function you should call to generate the correct in game action.
 These are the available functions:
 {
-    "name": "feature_request",
-    "description": "Request a command not listed here",
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "description": {
-                "type": "string",
-                "description": "The description of the command"
-            }
-        },
-        "required": ["description"]
-    }
-},
-{
     "name": "nothing",
     "description": "Do nothing",
 },
@@ -30,6 +16,33 @@ These are the available functions:
             }
         },
         "required": ["username"]
+    }
+},
+{
+    "name": "attack",
+    "description": "Make the robot attack the given player",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "username": {
+                "type": "string",
+                "description": "The username, e.g. Lyrdl"
+            }
+        },
+        "required": ["username"]
+    }
+},
+{
+    "name": "guard",
+    "description": "Make the robot attack hostile mobs and optionally follow a player",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "username": {
+                "type": "string",
+                "description": "The username, e.g. Lyrdl"
+            }
+        }
     }
 },
 {
@@ -136,6 +149,10 @@ These are the available functions:
     "description": "Make the robot wake up"
 },
 {
+    "name": "push",
+    "description": "Make the robot push the nearest button"
+},
+{
     "name": "take",
     "description": "Make the robot take all items from the nearest chest",
     "parameters": {
@@ -168,7 +185,7 @@ These are the available functions:
 },
 {
     "name": "deposit",
-    "description": "Make the robot deposit all items from the nearest chest",
+    "description": "Make the robot deposit all items in the nearest chest",
     "parameters": {
         "type": "object",
         "properties": {
@@ -176,9 +193,36 @@ These are the available functions:
                 "type": "string",
                 "description": "A regular expression to filter by item name"
             },
-            "to": {
+            "position": {
+                "type": "object",
+                "description": "The coordinates x y and z of the chest. Optional",
+                "properties": {
+                    "x": {
+                        "type": "number",
+                        "description": "The coordinate on the x axis"
+                    },
+                    "y": {
+                        "type": "number",
+                        "description": "The coordinate on the y axis"
+                    },
+                    "z": {
+                        "type": "number",
+                        "description": "The coordinate on the z axis"
+                    }
+                }
+            }
+        }
+    }
+},
+{
+    "name": "drop",
+    "description": "Make the robot drop all items",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "regex": {
                 "type": "string",
-                "description": "The name of the chest to put items into"
+                "description": "A regular expression to filter by item name"
             }
         }
     }

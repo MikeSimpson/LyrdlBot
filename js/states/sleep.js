@@ -37,7 +37,9 @@ class SleepStart {
         })
         try {
             if (bed) {
-                await bot.sleep(bed)
+                // Make sure we set spawn point
+                bot.activateBlock(bed);
+                await bot.sleep(bed);
             } else {
                 bot.chat("Oh woops, I can't find a bed!")
                 await stateMachine.pop();

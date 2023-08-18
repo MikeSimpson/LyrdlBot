@@ -69,6 +69,29 @@ async function putAll(bot, chest, regex) {
     }
 }
 
+async function dropAll(bot, regex) {
+
+    for (const item of bot.inventory.items()) {
+        if (!regex || item.name.match(new RegExp(regex))) {
+            await dropItem(item, item.count)
+        }
+    }
+
+    async function dropItem(item, amount) {
+        if (item) {
+            try {
+                await bot.toss(item.type, null, amount)
+                console.log(`drop ${amount} ${item.name}`)
+            } catch (err) {
+                console.log(err)
+                console.log(`unable to drop ${amount} ${item.name}`)
+            }
+        } else {
+            console.log(`unknown item ${name}`)
+        }
+    }
+}
+
 // Prepend time stamp and write message to log file and console
 const log = (message) => {
     let stampedMessage = `${new Date().toLocaleString("en-UK")}: ${message}\n`;
@@ -111,13 +134,14 @@ function updateMemory(update) {
 }
 
 async function getStatus(stateMachine, bot) {
+    const carrotCount = bot.inventory.items().filter(item => item.name == 'golden_carrot').reduce((partialSum, slot) => partialSum + slot.count, 0)
     return {
-        efficiency: ((bot.health / 20) * 100).toFixed(2),
-        powerLevel: `${bot.food}/20`,
+        efficiency: ((bot.health / 20) * 100).toFixed() + "%",
+        powerLevel: (((bot.food + carrotCount * 14) / 916) * 100).toFixed() + "%",
         location: {
-            x: bot.entity.position.x.toFixed(2),
-            y: bot.entity.position.y.toFixed(2),
-            z: bot.entity.position.z.toFixed(2),
+            x: bot.entity.position.x.toFixed(),
+            y: bot.entity.position.y.toFixed(),
+            z: bot.entity.position.z.toFixed(),
             dimension: bot.game.dimension,
         },
         task: stateMachine.currentState() ? stateMachine.currentState().description() : "Booting up",
@@ -125,4 +149,4 @@ async function getStatus(stateMachine, bot) {
     }
 }
 
-module.exports = { move, takeAll, putAll, log, prompt, readMemory, getStatus, updateMemory }
+module.exports = { move, takeAll, putAll, dropAll, log, prompt, readMemory, getStatus, updateMemory }

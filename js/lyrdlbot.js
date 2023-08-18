@@ -5,7 +5,12 @@ const { StateMachine } = require('./state-machine');
 const { Idle } = require('./states/idle');
 const { processFunction } = require('./functions');
 const { getFunctionResponse, getChatResponse } = require('./gpt');
-const { log, prompt, getStatus } = require('./util');
+const { log, prompt } = require('./util');
+const armorManager = require("mineflayer-armor-manager");
+const { autototem } = require('mineflayer-auto-totem');
+const pvp = require('mineflayer-pvp').plugin;
+const toolPlugin = require('mineflayer-tool').plugin;
+
 
 // Auth options from command line arguments
 const options = {
@@ -24,17 +29,24 @@ function createBot() {
 
     bot.loadPlugin(pathfinder);
     bot.loadPlugin(autoeat);
+    bot.loadPlugin(armorManager);
+    bot.loadPlugin(autototem);
+    bot.loadPlugin(pvp);
+    bot.loadPlugin(toolPlugin);
 
     const stateMachine = new StateMachine(bot)
+
+    var lastHealth;
 
     bot.once('spawn', () => {
         stateMachine.start(new Idle());
         prompt(bot);
         bot.autoEat.options = {
-            priority: 'foodPoints',
-            startAt: 14,
-            bannedFood: []
-        }
+            priority: 'saturation',
+            bannedFood: ['golden_apple']
+        };
+        bot.once("spawn", () => bot.armorManager.equipAll());
+        lastHealth = bot.health;
     })
 
     bot.on('autoeat_started', () => {
@@ -47,6 +59,15 @@ function createBot() {
     })
 
     bot.on('health', () => {
+        const hasTotem = bot.inventory.items().find(item => item.name.includes('Totem'))
+        if (bot.health < 10 && bot.health < lastHealth && !hasTotem){
+            bot.chat("EMERGENCY SHUTDOWN PROTOCOL INTIATED!!");
+            log("Emergency shutdown at: " + JSON.stringify(bot.entity.position));
+            bot.quit("Emergency Disconnect");
+        }
+
+        lastHealth = bot.health;
+
         if (bot.food === 20) bot.autoEat.disable()
         // Disable the plugin if the bot is at 20 food points
         else bot.autoEat.enable() // Else enable the plugin again
@@ -55,6 +76,9 @@ function createBot() {
     // log errors and disconnections
     bot.on('end', (reason) => {
         log("Disconnected: " + reason)
+        if (reason != "Emergency Disconnect") {
+            createBot()
+        }
     })
 
     bot.on('error', (reason) => {
@@ -94,6 +118,10 @@ function createBot() {
             stateMachine.currentState().wake(stateMachine, bot)
         }
     })
+    
+    bot.on("physicsTick", async () => {
+        bot.autototem.equip()
+    })
 
     // listen for messages
     bot.on('message', (jsonMsg) => {
@@ -111,7 +139,7 @@ function createBot() {
                 while(attempts > 0){
                     try {
                         let commandResponse = null;
-                        if(message.match(/<Lyrdl>.*/)){
+                        // if(message.match(/<Lyrdl>.*/)){
                             var functionMessages = lastTenMessages.slice();
                             if(attempts != 3){
                                 functionMessages.push("Remember to only reply with known JSON functions")
@@ -119,7 +147,7 @@ function createBot() {
                             const command = (await getFunctionResponse(functionMessages)).content;
                             commandResponse = await processFunction(JSON.parse(command), stateMachine, bot);
                             console.log(commandResponse);
-                        }
+                        // }
                         const chat = (await getChatResponse(lastTenMessages, commandResponse)).content;
                         bot.chat(chat);
                         attempts = 0;
@@ -139,9 +167,6 @@ function createBot() {
             }
         }
     })
-
-    bot.on('end', createBot)
-
 }
 
 createBot()

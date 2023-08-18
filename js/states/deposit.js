@@ -15,7 +15,7 @@ class Deposit {
     }
 
     async enter(stateMachine, bot) {
-        console.log("Entered Dump");
+        console.log("Entered Deposit");
         // put all items in nearest chest
         if (this.extras.position) {
             const chest = bot.blockAt(new Vec3(this.extras.position.x, this.extras.position.y, this.extras.position.z))
@@ -39,7 +39,7 @@ class Deposit {
     }
 
     async exit(stateMachine, bot) {
-        console.log("Exited Dump state");
+        console.log("Exited Deposit state");
     }
 }
 

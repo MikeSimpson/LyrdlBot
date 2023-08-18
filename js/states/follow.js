@@ -93,7 +93,6 @@ class FollowLost {
 
     async enter(stateMachine, bot) {
         console.log("Entered FollowLost state");
-        bot.chat("I can\'t find you!")
         const targetName = this.parent.extras.username;
 
         // look for target
@@ -107,7 +106,6 @@ class FollowLost {
     }
     async exit(stateMachine, bot) {
         console.log("Exited FollowLost state");
-        bot.chat("I found you!")
     }
 }
 

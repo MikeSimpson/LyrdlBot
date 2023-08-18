@@ -10,20 +10,37 @@ const { Deposit } = require('./states/deposit');
 const { Take } = require('./states/take');
 const { Wait } = require('./states/wait');
 const { Goto } = require('./states/goto');
+const { Attack } = require('./states/attack');
+const { Guard } = require('./states/guard');
+const { Drop } = require('./states/drop');
+const { Push } = require('./states/push');
 
 async function processFunction(command, stateMachine, bot) {
     let response = null;
     switch (command.name) {
         case "follow":
-            // TODO handle error and send LLM a message to correct it
             stateMachine.clear();
             stateMachine.transition(new Follow(command.parameters));
             response = "Following";
+            break;
+        case "attack":
+            stateMachine.clear();
+            stateMachine.transition(new Attack(command.parameters));
+            response = "Attacking";
+            break;
+        case "guard":
+            stateMachine.clear();
+            stateMachine.transition(new Guard(command.parameters));
+            response = "Guarding";
             break;
         case "stop":
             stateMachine.clear();
             stateMachine.transition(new Idle());
             response = "Stopping";
+            break;
+        case "push":
+            stateMachine.transition(new Push());
+            response = "Pushing";
             break;
         case "get_in":
             stateMachine.transition(new Ride());
@@ -66,6 +83,10 @@ async function processFunction(command, stateMachine, bot) {
         case "deposit":
             stateMachine.transition(new Deposit(command.parameters));
             response = "Depositing";
+            break;
+        case "drop":
+            stateMachine.transition(new Drop(command.parameters));
+            response = "Dropping";
             break;
         case "wait":
             stateMachine.transition(new Wait(command.parameters));

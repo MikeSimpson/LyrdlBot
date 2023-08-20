@@ -1,3 +1,5 @@
+const { botCreator } = require('../botCreator');
+
 class Sleep {
     description() { return "sleep" }
 
@@ -5,7 +7,7 @@ class Sleep {
 
     async enter(stateMachine, bot) {
         console.log("Entered Sleep state");
-        this.stateMachine.start(new SleepStart());
+        this.stateMachine.start(new SleepStart(this));
     }
 
     async exit(stateMachine, bot) {
@@ -26,9 +28,14 @@ class Sleep {
     }
 
 }
+
 class SleepStart {
+    constructor(parent){
+        this.parent = parent;
+    }
+
     async enter(stateMachine, bot) {
-        console.log("Entered Sleeping state");
+        console.log("Entered SleepStart state");
         // Find a bed
         const bed = bot.findBlock({
             matching: (block) => {
@@ -36,21 +43,24 @@ class SleepStart {
             }
         })
         try {
-            if (bed) {
-                // Make sure we set spawn point
-                bot.activateBlock(bed);
-                await bot.sleep(bed);
-            } else {
-                bot.chat("Oh woops, I can't find a bed!")
-                await stateMachine.pop();
-            }
+            // Make sure we set spawn point
+            bot.activateBlock(bed);
+            await bot.sleep(bed);
         } catch (error) {
+            console.log("Dimension: "+bot.game.dimension)
+            if (bot.game.dimension == 'overworld') {
+                // Log off for five seconds
+                bot.quit("Logging Off to pass the night")
+                setTimeout(() => { botCreator.createBot() }, 10000);
+            }
+
+            await stateMachine.pop();
             // "Can only sleep at night or during thunderstorm"
             console.log(error)
         }
     }
     async exit(stateMachine, bot) {
-        console.log("Exited Sleeping state");
+        console.log("Exited SleepStart state");
     }
 }
 

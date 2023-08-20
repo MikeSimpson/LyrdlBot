@@ -1,5 +1,5 @@
 
-const { getStatus, updateMemory } = require('./util');
+const { getStatus, updateMemory, readMemory } = require('./util');
 const { Follow } = require('./states/follow');
 const { Idle } = require('./states/idle');
 const { Ride } = require('./states/ride');
@@ -30,7 +30,7 @@ async function processFunction(command, stateMachine, bot) {
             break;
         case "guard":
             stateMachine.clear();
-            stateMachine.transition(new Guard(command.parameters));
+            stateMachine.transition(new Guard(command.parameters ?? {}));
             response = "Guarding";
             break;
         case "stop":
@@ -136,6 +136,13 @@ async function processFunction(command, stateMachine, bot) {
                 return `You are operating at ${status.efficiency} efficiency, your power level is ${status.powerLevel}, your location is ${status.location.x} ${status.location.y} ${status.location.z} in ${status.location.dimension} and your current task is ${status.task}`;
             }
             response = reportStatus();
+            break;
+        case "get_waypoints":
+            async function reportWaypoints() {
+                const waypoints = Object.keys((await readMemory()).waypoints);
+                return `These are the available waypoints, please list them in a single line ${waypoints}`;
+            }
+            response = reportWaypoints();
             break;
     }
     return response;

@@ -111,7 +111,7 @@ const chatExamples = [
     },
     {
         message: "<Lyrdl> List all waypoints",
-        function: `{"name":"nothing"}`,
+        function: `{"name":"get_waypoints"}`,
         response: "HERE ARE THE WAYPOINTS:\NGUN_P_O -> THE OVERWORLD SIDE PORTAL FOR THE GUNPOWDER FARM\NGUN_P_N -> THE NETHER SIDE PORTAL FOR THE GUNPOWDER FARM"
     },
     {

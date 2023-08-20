@@ -23,6 +23,11 @@ class Mission {
         const missions = (await readMemory()).missions;
         const mission = missions[this.extras.missionName];
 
+        if(!mission){
+            await stateMachine.pop();
+            return
+        }
+
         if (mission.looping) {
             stateMachine.push(new Mission(this.extras));
         }

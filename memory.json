@@ -1,1 +1,456 @@
-{"waypoints":{"gun_p_o":{"x":766,"y":63,"z":13,"dimension":"overworld","description":"The overworld side portal for the gunpowder farm"},"gun_p_n":{"x":"95","y":"129","z":"-6","dimension":"the_nether","description":"The nether side portal for the gunpowder farm"},"origin":{"x":"0","y":"64","z":"0","dimension":"overworld","description":"The center of the world"},"Minland":{"x":"5771","y":"63","z":"-26759","dimension":"overworld","description":"Emperor Impish's kingdom"},"Castle_At_At":{"x":"5805","y":"79","z":"-25541","dimension":"overworld","description":"Emperor Impish's seat of power"},"Mincity":{"x":"5787","y":"71","z":"-26643","dimension":"overworld","description":"Where the peasants of Minland live"},"boat_road_cnr":{"x":"106.21","y":"-2584.64","z":"-0.85","dimension":"the_nether","description":"the corner of the boat road"},"Slumton":{"x":5732.332102017723,"y":76.9375,"z":-26394.5,"dimension":"overworld","description":"Where the vagrants and vagabonds of Withertop live"},"gunpowder_edge":{"x":760,"y":176,"z":24,"dimension":"overworld","description":"The edge of the gunpowder platform"},"gunpowder_collection_point":{"x":784,"y":64,"z":14,"dimension":"overworld","description":"The collection point of the gunpowder farm"},"gunpowder_north_chest":{"x":782,"y":64,"z":8,"dimension":"overworld","description":"The north chest of the gunpowder farm"},"gunpowder_east_chest":{"x":788,"y":64,"z":12,"dimension":"overworld","description":"The east chest of the gunpowder farm"},"gunpowder_south_chest":{"x":784,"y":64,"z":19,"dimension":"overworld","description":"The south chest of the gunpowder farm"},"gunpowder_west_chest":{"x":778,"y":64,"z":14,"dimension":"overworld","description":"The west chest of the gunpowder farm"},"nethertop_gunpowder_dropoff_point":{"x":730,"y":129,"z":-3292,"dimension":"the_nether","description":"The gunpowder dropoff point"},"vault_ghi":{"x":5686,"y":90,"z":-26354,"dimension":"overworld","description":""},"vault_def":{"x":5682,"y":92,"z":-26356,"dimension":"overworld","description":""},"vault_jkl":{"x":5690,"y":87,"z":-26359,"dimension":"overworld","description":""},"vault_mno":{"x":5686,"y":85,"z":-26362,"dimension":"overworld","description":""},"vault_pqr":{"x":5682,"y":82,"z":-26358,"dimension":"overworld","description":""},"vault_stu":{"x":5686,"y":80,"z":-26354,"dimension":"overworld","description":""},"vault_vwxyz":{"x":5690,"y":77,"z":-26358,"dimension":"overworld","description":""},"vault_abc":{"x":5686,"y":95,"z":-26362,"dimension":"overworld","description":""},"lyrdl_porter":{"x":5707.508640628701,"y":98,"z":-26334.31479616745,"dimension":"overworld","description":""},"withertop":{"x":5725.5,"y":94.5,"z":-26346.371173497257,"dimension":"overworld","description":""},"respawn_point":{"x":5687.5,"y":126,"z":-26358.61865725616,"dimension":"overworld","description":""}},"missions":{"dance":{"looping":true,"steps":[{"state":"Step","parameters":{"direction":"forward"}},{"state":"Step","parameters":{"direction":"left"}},{"state":"Step","parameters":{"direction":"back"}},{"state":"Step","parameters":{"direction":"right"}}]},"gunpowder":{"looping":true,"steps":[{"state":"Goto","parameters":{"waypoint":"gun_p_n"}},{"state":"Wait","parameters":{"ticks":"100"}},{"state":"Wait","parameters":{"ticks":"30000"}},{"state":"Goto","parameters":{"waypoint":"gunpowder_edge"}},{"state":"Step","parameters":{"direction":"forward"}},{"state":"Goto","parameters":{"waypoint":"gunpowder_collection_point"}},{"state":"Goto","parameters":{"waypoint":"gunpowder_north_chest"}},{"state":"Take"},{"state":"Goto","parameters":{"waypoint":"gunpowder_east_chest"}},{"state":"Take"},{"state":"Goto","parameters":{"waypoint":"gunpowder_south_chest"}},{"state":"Take"},{"state":"Goto","parameters":{"waypoint":"gunpowder_west_chest"}},{"state":"Take"},{"state":"Goto","parameters":{"waypoint":"gun_p_o"}},{"state":"Wait","parameters":{"ticks":"100"}},{"state":"Goto","parameters":{"waypoint":"nethertop_gunpowder_dropoff_point"}},{"state":"Deposit","parameters":{"regex":"gunpowder"}}]},"clean_vault":{"looping":true,"steps":[{"state":"Goto","parameters":{"waypoint":"vault_jkl"}},{"state":"Take","parameters":{"position":{"x":5691,"y":87,"z":-26358}}},{"state":"Goto","parameters":{"waypoint":"vault_abc"}},{"state":"Deposit","parameters":{"regex":"^[abc].*"}},{"state":"Goto","parameters":{"waypoint":"vault_def"}},{"state":"Deposit","parameters":{"regex":"^[def].*"}},{"state":"Goto","parameters":{"waypoint":"vault_ghi"}},{"state":"Deposit","parameters":{"regex":"^[ghi].*"}},{"state":"Goto","parameters":{"waypoint":"vault_jkl"}},{"state":"Deposit","parameters":{"regex":"^[jkl].*"}},{"state":"Goto","parameters":{"waypoint":"vault_mno"}},{"state":"Deposit","parameters":{"regex":"^[mno].*"}},{"state":"Goto","parameters":{"waypoint":"vault_pqr"}},{"state":"Deposit","parameters":{"regex":"^[pqr].*"}},{"state":"Goto","parameters":{"waypoint":"vault_stu"}},{"state":"Deposit","parameters":{"regex":"^[stu].*"}},{"state":"Goto","parameters":{"waypoint":"vault_vwxyz"}},{"state":"Deposit","parameters":{"regex":"^[vwxyz].*"}}]}}}
+{
+    "waypoints": {
+        "gun_p_o": {
+            "x": 766,
+            "y": 63,
+            "z": 13,
+            "dimension": "overworld",
+            "description": "The overworld side portal for the gunpowder farm"
+        },
+        "gun_p_n": {
+            "x": "95",
+            "y": "129",
+            "z": "-6",
+            "dimension": "the_nether",
+            "description": "The nether side portal for the gunpowder farm"
+        },
+        "origin": {
+            "x": "0",
+            "y": "64",
+            "z": "0",
+            "dimension": "overworld",
+            "description": "The center of the world"
+        },
+        "Minland": {
+            "x": "5771",
+            "y": "63",
+            "z": "-26759",
+            "dimension": "overworld",
+            "description": "Emperor Impish's kingdom"
+        },
+        "Castle_At_At": {
+            "x": "5805",
+            "y": "79",
+            "z": "-25541",
+            "dimension": "overworld",
+            "description": "Emperor Impish's seat of power"
+        },
+        "Mincity": {
+            "x": "5787",
+            "y": "71",
+            "z": "-26643",
+            "dimension": "overworld",
+            "description": "Where the peasants of Minland live"
+        },
+        "boat_road_cnr": {
+            "x": "106.21",
+            "y": "-2584.64",
+            "z": "-0.85",
+            "dimension": "the_nether",
+            "description": "the corner of the boat road"
+        },
+        "Slumton": {
+            "x": 5732.332102017723,
+            "y": 76.9375,
+            "z": -26394.5,
+            "dimension": "overworld",
+            "description": "Where the vagrants and vagabonds of Withertop live"
+        },
+        "gunpowder_edge": {
+            "x": 760,
+            "y": 176,
+            "z": 24,
+            "dimension": "overworld",
+            "description": "The edge of the gunpowder platform"
+        },
+        "gunpowder_collection_point": {
+            "x": 784,
+            "y": 64,
+            "z": 14,
+            "dimension": "overworld",
+            "description": "The collection point of the gunpowder farm"
+        },
+        "gunpowder_north_chest": {
+            "x": 782,
+            "y": 64,
+            "z": 8,
+            "dimension": "overworld",
+            "description": "The north chest of the gunpowder farm"
+        },
+        "gunpowder_east_chest": {
+            "x": 788,
+            "y": 64,
+            "z": 12,
+            "dimension": "overworld",
+            "description": "The east chest of the gunpowder farm"
+        },
+        "gunpowder_south_chest": {
+            "x": 784,
+            "y": 64,
+            "z": 19,
+            "dimension": "overworld",
+            "description": "The south chest of the gunpowder farm"
+        },
+        "gunpowder_west_chest": {
+            "x": 778,
+            "y": 64,
+            "z": 14,
+            "dimension": "overworld",
+            "description": "The west chest of the gunpowder farm"
+        },
+        "nethertop_gunpowder_dropoff_point": {
+            "x": 730,
+            "y": 129,
+            "z": -3292,
+            "dimension": "the_nether",
+            "description": "The gunpowder dropoff point"
+        },
+        "vault_ghi": {
+            "x": 5686,
+            "y": 90,
+            "z": -26354,
+            "dimension": "overworld",
+            "description": ""
+        },
+        "vault_def": {
+            "x": 5682,
+            "y": 92,
+            "z": -26356,
+            "dimension": "overworld",
+            "description": ""
+        },
+        "vault_jkl": {
+            "x": 5690,
+            "y": 87,
+            "z": -26359,
+            "dimension": "overworld",
+            "description": ""
+        },
+        "vault_mno": {
+            "x": 5686,
+            "y": 85,
+            "z": -26362,
+            "dimension": "overworld",
+            "description": ""
+        },
+        "vault_pqr": {
+            "x": 5682,
+            "y": 82,
+            "z": -26358,
+            "dimension": "overworld",
+            "description": ""
+        },
+        "vault_stu": {
+            "x": 5686,
+            "y": 80,
+            "z": -26354,
+            "dimension": "overworld",
+            "description": ""
+        },
+        "vault_vwxyz": {
+            "x": 5690,
+            "y": 77,
+            "z": -26358,
+            "dimension": "overworld",
+            "description": ""
+        },
+        "vault_abc": {
+            "x": 5686,
+            "y": 95,
+            "z": -26362,
+            "dimension": "overworld",
+            "description": ""
+        },
+        "lyrdl_porter": {
+            "x": 5707.508640628701,
+            "y": 98,
+            "z": -26334.31479616745,
+            "dimension": "overworld",
+            "description": ""
+        },
+        "withertop": {
+            "x": 5725.5,
+            "y": 94.5,
+            "z": -26346.371173497257,
+            "dimension": "overworld",
+            "description": ""
+        },
+        "respawn_point": {
+            "x": 5687.5,
+            "y": 126,
+            "z": -26358.61865725616,
+            "dimension": "overworld",
+            "description": ""
+        },
+        "withertop_lower_gate": {
+            "x": 5720.679128560197,
+            "y": 79,
+            "z": -26388.662990592533,
+            "dimension": "overworld",
+            "description": ""
+        },
+        "nethertop_portal": {
+            "x": 725.5,
+            "y": 129,
+            "z": -3286.5,
+            "dimension": "the_nether",
+            "description": ""
+        },
+        "withertop_portal": {
+            "x": 5724.3,
+            "y": 92,
+            "z": -26355.81521092562,
+            "dimension": "overworld",
+            "description": ""
+        }
+    },
+    "missions": {
+        "dance": {
+            "looping": true,
+            "steps": [
+                {
+                    "state": "Step",
+                    "parameters": {
+                        "direction": "forward"
+                    }
+                },
+                {
+                    "state": "Step",
+                    "parameters": {
+                        "direction": "left"
+                    }
+                },
+                {
+                    "state": "Step",
+                    "parameters": {
+                        "direction": "back"
+                    }
+                },
+                {
+                    "state": "Step",
+                    "parameters": {
+                        "direction": "right"
+                    }
+                }
+            ]
+        },
+        "gunpowder": {
+            "looping": true,
+            "steps": [
+                {
+                    "state": "Goto",
+                    "parameters": {
+                        "waypoint": "gun_p_n"
+                    }
+                },
+                {
+                    "state": "Wait",
+                    "parameters": {
+                        "ticks": "100"
+                    }
+                },
+                {
+                    "state": "Wait",
+                    "parameters": {
+                        "ticks": "30000"
+                    }
+                },
+                {
+                    "state": "Goto",
+                    "parameters": {
+                        "waypoint": "gunpowder_edge"
+                    }
+                },
+                {
+                    "state": "Step",
+                    "parameters": {
+                        "direction": "forward"
+                    }
+                },
+                {
+                    "state": "Goto",
+                    "parameters": {
+                        "waypoint": "gunpowder_collection_point"
+                    }
+                },
+                {
+                    "state": "Goto",
+                    "parameters": {
+                        "waypoint": "gunpowder_north_chest"
+                    }
+                },
+                {
+                    "state": "Take"
+                },
+                {
+                    "state": "Goto",
+                    "parameters": {
+                        "waypoint": "gunpowder_east_chest"
+                    }
+                },
+                {
+                    "state": "Take"
+                },
+                {
+                    "state": "Goto",
+                    "parameters": {
+                        "waypoint": "gunpowder_south_chest"
+                    }
+                },
+                {
+                    "state": "Take"
+                },
+                {
+                    "state": "Goto",
+                    "parameters": {
+                        "waypoint": "gunpowder_west_chest"
+                    }
+                },
+                {
+                    "state": "Take"
+                },
+                {
+                    "state": "Goto",
+                    "parameters": {
+                        "waypoint": "gun_p_o"
+                    }
+                },
+                {
+                    "state": "Wait",
+                    "parameters": {
+                        "ticks": "100"
+                    }
+                },
+                {
+                    "state": "Goto",
+                    "parameters": {
+                        "waypoint": "nethertop_gunpowder_dropoff_point"
+                    }
+                },
+                {
+                    "state": "Deposit",
+                    "parameters": {
+                        "regex": "gunpowder"
+                    }
+                }
+            ]
+        },
+        "clean_vault": {
+            "looping": true,
+            "steps": [
+                {
+                    "state": "Goto",
+                    "parameters": {
+                        "waypoint": "vault_jkl"
+                    }
+                },
+                {
+                    "state": "Take",
+                    "parameters": {
+                        "position": {
+                            "x": 5691,
+                            "y": 87,
+                            "z": -26358
+                        }
+                    }
+                },
+                {
+                    "state": "Goto",
+                    "parameters": {
+                        "waypoint": "vault_abc"
+                    }
+                },
+                {
+                    "state": "Deposit",
+                    "parameters": {
+                        "regex": "^[abc].*"
+                    }
+                },
+                {
+                    "state": "Goto",
+                    "parameters": {
+                        "waypoint": "vault_def"
+                    }
+                },
+                {
+                    "state": "Deposit",
+                    "parameters": {
+                        "regex": "^[def].*"
+                    }
+                },
+                {
+                    "state": "Goto",
+                    "parameters": {
+                        "waypoint": "vault_ghi"
+                    }
+                },
+                {
+                    "state": "Deposit",
+                    "parameters": {
+                        "regex": "^[ghi].*"
+                    }
+                },
+                {
+                    "state": "Goto",
+                    "parameters": {
+                        "waypoint": "vault_jkl"
+                    }
+                },
+                {
+                    "state": "Deposit",
+                    "parameters": {
+                        "regex": "^[jkl].*"
+                    }
+                },
+                {
+                    "state": "Goto",
+                    "parameters": {
+                        "waypoint": "vault_mno"
+                    }
+                },
+                {
+                    "state": "Deposit",
+                    "parameters": {
+                        "regex": "^[mno].*"
+                    }
+                },
+                {
+                    "state": "Goto",
+                    "parameters": {
+                        "waypoint": "vault_pqr"
+                    }
+                },
+                {
+                    "state": "Deposit",
+                    "parameters": {
+                        "regex": "^[pqr].*"
+                    }
+                },
+                {
+                    "state": "Goto",
+                    "parameters": {
+                        "waypoint": "vault_stu"
+                    }
+                },
+                {
+                    "state": "Deposit",
+                    "parameters": {
+                        "regex": "^[stu].*"
+                    }
+                },
+                {
+                    "state": "Goto",
+                    "parameters": {
+                        "waypoint": "vault_vwxyz"
+                    }
+                },
+                {
+                    "state": "Deposit",
+                    "parameters": {
+                        "regex": "^[vwxyz].*"
+                    }
+                }
+            ]
+        }
+    }
+}

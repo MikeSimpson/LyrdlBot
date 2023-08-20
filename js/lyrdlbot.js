@@ -10,7 +10,8 @@ const armorManager = require("mineflayer-armor-manager");
 const { autototem } = require('mineflayer-auto-totem');
 const pvp = require('mineflayer-pvp').plugin;
 const toolPlugin = require('mineflayer-tool').plugin;
-
+const Movements = require('mineflayer-pathfinder').Movements;
+const { botCreator } = require('./botCreator');
 
 // Auth options from command line arguments
 const options = {
@@ -19,13 +20,20 @@ const options = {
     username: process.argv[4],
     password: process.argv[5],
     auth: 'microsoft',
-    checkTimeoutInterval: 60 * 10000 // timeout after 600 seconds.
+    checkTimeoutInterval: 60 * 10000, // timeout after 600 seconds.
+    disableChatSigning: true
 };
+
+var lastHealth;
+
+const lastTenMessages = [];
+
+const stateMachine = new StateMachine();
+
+const obey = ["Lyrdl"];
 
 function createBot() {
     const bot = mineflayer.createBot(options)
-
-    const lastTenMessages = [];
 
     bot.loadPlugin(pathfinder);
     bot.loadPlugin(autoeat);
@@ -34,11 +42,8 @@ function createBot() {
     bot.loadPlugin(pvp);
     bot.loadPlugin(toolPlugin);
 
-    const stateMachine = new StateMachine(bot)
-
-    var lastHealth;
-
     bot.once('spawn', () => {
+        stateMachine.setBot(bot);
         stateMachine.start(new Idle());
         prompt(bot);
         bot.autoEat.options = {
@@ -47,6 +52,14 @@ function createBot() {
         };
         bot.once("spawn", () => bot.armorManager.equipAll());
         lastHealth = bot.health;
+
+        const defaultMove = new Movements(bot)
+        defaultMove.canDig = false
+        defaultMove.allow1by1towers = false
+        defaultMove.placeCost = 1000000
+        defaultMove.allowFreeMotion = true
+
+        bot.pvp.movements = defaultMove;
     })
 
     bot.on('autoeat_started', () => {
@@ -59,8 +72,8 @@ function createBot() {
     })
 
     bot.on('health', () => {
-        const hasTotem = bot.inventory.items().find(item => item.name.includes('Totem'))
-        if (bot.health < 10 && bot.health < lastHealth && !hasTotem){
+        const hasTotem = bot.inventory.items().find(item => item.name.includes('totem'))
+        if (bot.health < 10 && bot.health < lastHealth && !hasTotem) {
             bot.chat("EMERGENCY SHUTDOWN PROTOCOL INTIATED!!");
             log("Emergency shutdown at: " + JSON.stringify(bot.entity.position));
             bot.quit("Emergency Disconnect");
@@ -118,9 +131,12 @@ function createBot() {
             stateMachine.currentState().wake(stateMachine, bot)
         }
     })
-    
+
     bot.on("physicsTick", async () => {
         bot.autototem.equip()
+        if (stateMachine.currentState() && stateMachine.currentState().physicsTick) {
+            stateMachine.currentState().physicsTick(stateMachine, bot)
+        }
     })
 
     // listen for messages
@@ -131,25 +147,28 @@ function createBot() {
         if (lastTenMessages.length > 10) {
             lastTenMessages.shift();
         }
+
         async function handleChat() {
             if (message.match(/<.*> lb!.*/i)) {
                 // TODO
             } else {
                 var attempts = 3;
-                while(attempts > 0){
+                while (attempts > 0) {
                     try {
                         let commandResponse = null;
-                        // if(message.match(/<Lyrdl>.*/)){
+                        if(true || message.match(/sleep|zz/i)){
                             var functionMessages = lastTenMessages.slice();
-                            if(attempts != 3){
+                            if (attempts != 3) {
                                 functionMessages.push("Remember to only reply with known JSON functions")
                             }
                             const command = (await getFunctionResponse(functionMessages)).content;
                             commandResponse = await processFunction(JSON.parse(command), stateMachine, bot);
                             console.log(commandResponse);
-                        // }
-                        const chat = (await getChatResponse(lastTenMessages, commandResponse)).content;
-                        bot.chat(chat);
+                            const chat = (await getChatResponse(lastTenMessages, commandResponse)).content;
+                            for (username of obey) {
+                                // bot.chat(chat);
+                            }
+                        }
                         attempts = 0;
                     } catch (error) {
                         console.log(error);
@@ -169,4 +188,6 @@ function createBot() {
     })
 }
 
-createBot()
+createBot();
+
+botCreator.createBot = () => { createBot() };

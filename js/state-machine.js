@@ -1,14 +1,11 @@
-const Vec3 = require('vec3').Vec3;
-const mineflayer = require('mineflayer');
-const pathfinder = require('mineflayer-pathfinder').pathfinder;
-const { move, putAll, takeAll, readMemory } = require('./util');
 const { Idle } = require('./states/idle');
 
 // A class to hold the current state and handle state transitions
 class StateMachine {
+    
+    stateStack = [];
 
-    constructor(bot) {
-        this.stateStack = [];
+    setBot(bot) {
         this.bot = bot;
     }
 
@@ -18,13 +15,15 @@ class StateMachine {
 
     async start(initialState) {
         this.stateStack.push(initialState);
-        initialState.stateMachine = new StateMachine(this.bot);
+        initialState.stateMachine = new StateMachine();
+        initialState.stateMachine.setBot(this.bot);
         await this.currentState().enter(this, this.bot);
     }
 
     async transition(newState) {
         await this.currentState().exit(this, this.bot);
-        newState.stateMachine = new StateMachine(this.bot);
+        newState.stateMachine = new StateMachine();
+        newState.stateMachine.setBot(this.bot);
         this.stateStack.push(newState);
         await this.currentState().enter(this, this.bot);
     }
@@ -35,7 +34,8 @@ class StateMachine {
     }
 
     async push(newState) {
-        newState.stateMachine = new StateMachine(this.bot);
+        newState.stateMachine = new StateMachine();
+        newState.stateMachine.setBot(this.bot);
         this.stateStack.push(newState);
     }
 

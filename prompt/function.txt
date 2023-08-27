@@ -73,6 +73,79 @@ These are the available functions:
     }
 },
 {
+    "name": "dig",
+    "description": "Make the robot dig the block at the given coordinates",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "coordinates": {
+                "type": "object",
+                "description": "The coordinates x y and z e.g. 0 0 0",
+                "properties": {
+                    "x": {
+                        "type": "number",
+                        "description": "The coordinate on the x axis"
+                    },
+                    "y": {
+                        "type": "number",
+                        "description": "The coordinate on the y axis"
+                    },
+                    "z": {
+                        "type": "number",
+                        "description": "The coordinate on the z axis"
+                    }
+                }
+            }
+        }
+    }
+},
+{
+    "name": "trench",
+    "description": "Make the robot dig downwards in a square defined by the given pair of coordinates",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "cornerA": {
+                "type": "object",
+                "description": "The coordinates x y and z of the first corner of the square in which to dig",
+                "properties": {
+                    "x": {
+                        "type": "number",
+                        "description": "The coordinate on the x axis"
+                    },
+                    "y": {
+                        "type": "number",
+                        "description": "The coordinate on the y axis"
+                    },
+                    "z": {
+                        "type": "number",
+                        "description": "The coordinate on the z axis"
+                    }
+                },
+
+            "cornerB": {
+                "type": "object",
+                "description": "The coordinates x y and z of the other corner of the square in which to dig",
+                "properties": {
+                    "x": {
+                        "type": "number",
+                        "description": "The coordinate on the x axis"
+                    },
+                    "y": {
+                        "type": "number",
+                        "description": "The coordinate on the y axis"
+                    },
+                    "z": {
+                        "type": "number",
+                        "description": "The coordinate on the z axis"
+                    }
+                }
+            }
+            }
+        }
+    }
+},
+{
     "name": "goto",
     "description": "Make the robot pathfind to the given coordinates or waypoint name",
     "parameters": {

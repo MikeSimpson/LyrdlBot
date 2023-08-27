@@ -14,6 +14,8 @@ const { Attack } = require('./states/attack');
 const { Guard } = require('./states/guard');
 const { Drop } = require('./states/drop');
 const { Push } = require('./states/push');
+const { Dig } = require('./states/dig');
+const { Trench } = require('./states/trench');
 
 async function processFunction(command, stateMachine, bot) {
     let response = null;
@@ -75,6 +77,15 @@ async function processFunction(command, stateMachine, bot) {
             stateMachine.clear();
             stateMachine.transition(new Goto(command.parameters));
             response = "Going to  " + (command.parameters.waypoint ?? "coordinates");
+            break;
+        case "trench":
+            stateMachine.clear();
+            stateMachine.transition(new Trench(command.parameters));
+            response = "Trenching";
+            break;
+        case "dig":
+            stateMachine.transition(new Dig(command.parameters));
+            response = "Digging";
             break;
         case "take":
             stateMachine.transition(new Take(command.parameters));

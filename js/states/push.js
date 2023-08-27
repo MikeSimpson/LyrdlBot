@@ -10,6 +10,7 @@ class Push {
             }
         })
         await bot.activateBlock(button);
+        await stateMachine.pop();
     }
 
     async exit(stateMachine, bot) {

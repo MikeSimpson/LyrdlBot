@@ -14,8 +14,6 @@ class Follow {
         username: null,
     }
 
-    stateMachine = null
-
     async enter(stateMachine, bot) {
         console.log("Entered Follow state with target: " + this.extras.username);
         // bot.chat("I will follow!");
@@ -25,6 +23,7 @@ class Follow {
     async exit(stateMachine, bot) {
         console.log("Exited Follow state");
         this.stateMachine.currentState().exit(stateMachine, bot);
+        this.stateMachine.clear();
     }
 
     async movingFinished() {
@@ -36,7 +35,7 @@ class Follow {
 // Sub states
 
 class FollowStart {
-    constructor(parent){
+    constructor(parent) {
         this.parent = parent;
     }
 
@@ -65,7 +64,7 @@ class FollowStart {
 }
 
 class Moving {
-    constructor(parent){
+    constructor(parent) {
         this.parent = parent;
     }
 
@@ -78,6 +77,11 @@ class Moving {
         } else {
             await move(bot, target.position)
         }
+        setTimeout(() => {
+            if (this.parent.stateMachine.currentState() === this) {
+                this.parent.stateMachine.transition(new FollowStart(this.parent));
+            }
+        }, 10000)
     }
 
     async exit(stateMachine, bot) {
@@ -87,7 +91,7 @@ class Moving {
 }
 
 class FollowLost {
-    constructor(parent){
+    constructor(parent) {
         this.parent = parent;
     }
 

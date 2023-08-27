@@ -21,7 +21,7 @@ const options = {
     password: process.argv[5],
     auth: 'microsoft',
     checkTimeoutInterval: 60 * 10000, // timeout after 600 seconds.
-    disableChatSigning: true
+    disableChatSigning: false
 };
 
 var lastHealth;
@@ -72,7 +72,7 @@ function createBot() {
     })
 
     bot.on('health', () => {
-        const hasTotem = bot.inventory.items().find(item => item.name.includes('totem'))
+        const hasTotem = bot.inventory.items().find(item => item.name.includes('otem'))
         if (bot.health < 10 && bot.health < lastHealth && !hasTotem) {
             bot.chat("EMERGENCY SHUTDOWN PROTOCOL INTIATED!!");
             log("Emergency shutdown at: " + JSON.stringify(bot.entity.position));
@@ -150,13 +150,17 @@ function createBot() {
 
         async function handleChat() {
             if (message.match(/<.*> lb!.*/i)) {
-                // TODO
-            } else {
+                try {
+                    processFunction(JSON.parse(message.split("lb! ")[1]), stateMachine, bot);
+                } catch (e) {
+                    bot.chat(e.message)
+                }
+            } else if (false) {
                 var attempts = 3;
                 while (attempts > 0) {
                     try {
                         let commandResponse = null;
-                        if(true || message.match(/sleep|zz/i)){
+                        if (true || message.match(/sleep|zz/i)) {
                             var functionMessages = lastTenMessages.slice();
                             if (attempts != 3) {
                                 functionMessages.push("Remember to only reply with known JSON functions")
@@ -166,7 +170,8 @@ function createBot() {
                             console.log(commandResponse);
                             const chat = (await getChatResponse(lastTenMessages, commandResponse)).content;
                             for (username of obey) {
-                                // bot.chat(chat);
+                                // bot.whisper(username, chat);
+                                bot.chat(chat);
                             }
                         }
                         attempts = 0;

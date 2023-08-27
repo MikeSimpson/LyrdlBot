@@ -14,8 +14,6 @@ class Attack {
         username: null,
     }
 
-    stateMachine = null
-
     async enter(stateMachine, bot) {
         console.log("Entered Attack state with target: " + this.extras.username);
         this.stateMachine.start(new AttackStart(this));
@@ -24,6 +22,7 @@ class Attack {
     async exit(stateMachine, bot) {
         console.log("Exited Attack state");
         this.stateMachine.currentState().exit(stateMachine, bot);
+        this.stateMachine.clear();
     }
 }
 
@@ -66,6 +65,11 @@ class Attacking {
         console.log("Entered Attacking state");
         const player = bot.players[this.parent.extras.username]
         bot.pvp.attack(player.entity)
+        setTimeout(() => {
+            if (this.parent.stateMachine.currentState() === this) {
+                this.parent.stateMachine.transition(new AttackStart(this.parent));
+            }
+        }, 10000)
     }
 
     async exit(stateMachine, bot) {

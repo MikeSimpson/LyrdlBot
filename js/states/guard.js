@@ -15,8 +15,6 @@ class Guard {
         username: null
     }
 
-    stateMachine = null
-
     sentryPosition = null
 
     async enter(stateMachine, bot) {
@@ -30,6 +28,7 @@ class Guard {
     async exit(stateMachine, bot) {
         console.log("Exited Guard state");
         this.stateMachine.currentState().exit(stateMachine, bot);
+        this.stateMachine.clear();
     }
 
     async movingFinished() {
@@ -106,6 +105,11 @@ class GuardFollow {
         } else {
             await move(bot, position)
         }
+        setTimeout(() => {
+            if (this.parent.stateMachine.currentState() === this) {
+                this.parent.stateMachine.transition(new GuardIdle(this.parent));
+            }
+        }, 10000)
     }
 
     async exit(stateMachine, bot) {
@@ -131,7 +135,7 @@ class GuardAttack {
         if (!position) {
             // bot.chat(await getChatResponse(["You have lost sight of the player"]))
             await this.parent.stateMachine.transition(new GuardLost(this.parent));
-        } else if(position.distanceTo(bot.entity.position) > 32) {
+        } else if(position.distanceTo(bot.entity.position) > 20) {
             await this.parent.stateMachine.transition(new GuardIdle(this.parent));
         } else {
             const filter = e => (e.type === 'mob' || e.type === 'hostile') && e.position.distanceTo(bot.entity.position) < 16 

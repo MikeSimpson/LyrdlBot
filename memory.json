@@ -363,7 +363,7 @@
                 {
                     "state": "Deposit",
                     "parameters": {
-                        "regex": "^[abc].*"
+                        "regex": "^(?!golden_carrot)([abc].*)"
                     }
                 },
                 {
@@ -375,7 +375,7 @@
                 {
                     "state": "Deposit",
                     "parameters": {
-                        "regex": "^[def].*"
+                        "regex": "^(?!golden_carrot)([def].*)"
                     }
                 },
                 {
@@ -387,7 +387,7 @@
                 {
                     "state": "Deposit",
                     "parameters": {
-                        "regex": "^[ghi].*"
+                        "regex": "^(?!golden_carrot)([ghi].*)"
                     }
                 },
                 {
@@ -399,7 +399,7 @@
                 {
                     "state": "Deposit",
                     "parameters": {
-                        "regex": "^[jkl].*"
+                        "regex": "^(?!golden_carrot)([jkl].*)"
                     }
                 },
                 {
@@ -411,7 +411,7 @@
                 {
                     "state": "Deposit",
                     "parameters": {
-                        "regex": "^[mno].*"
+                        "regex": "^(?!golden_carrot)([mno].*)"
                     }
                 },
                 {
@@ -423,7 +423,7 @@
                 {
                     "state": "Deposit",
                     "parameters": {
-                        "regex": "^[pqr].*"
+                        "regex": "^(?!golden_carrot)([pqr].*)"
                     }
                 },
                 {
@@ -435,7 +435,7 @@
                 {
                     "state": "Deposit",
                     "parameters": {
-                        "regex": "^[stu].*"
+                        "regex": "^(?!golden_carrot)([stu].*)"
                     }
                 },
                 {
@@ -447,7 +447,7 @@
                 {
                     "state": "Deposit",
                     "parameters": {
-                        "regex": "^[vwxyz].*"
+                        "regex": "^(?!golden_carrot)([vwxyz].*)"
                     }
                 }
             ]

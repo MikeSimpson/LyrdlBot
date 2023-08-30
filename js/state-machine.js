@@ -14,20 +14,21 @@ class StateMachine {
     }
 
     async start(initialState) {
-        if(initialState.description){
-            console.log("Start: " + initialState.description())
-        }
         this.stateStack.push(initialState)
         initialState.stateMachine = new StateMachine()
         initialState.stateMachine.setBot(this.bot)
+
+        if(this.currentState().description){
+            console.log("Enter: " + this.currentState().description())
+        }
         if (this.currentState().enter) {
             await this.currentState().enter(this, this.bot)
         }
     }
 
     async transition(newState) {
-        if(newState.description){
-            console.log("Transition: " + newState.description())
+        if(this.currentState().description){
+            console.log("Exit: " + this.currentState().description())
         }
         if (this.currentState().exit) {
             await this.currentState().exit(this, this.bot)
@@ -35,12 +36,19 @@ class StateMachine {
         newState.stateMachine = new StateMachine()
         newState.stateMachine.setBot(this.bot)
         this.stateStack.push(newState)
+
+        if(this.currentState().description){
+            console.log("Enter: " + this.currentState().description())
+        }
         if (this.currentState().enter) {
             await this.currentState().enter(this, this.bot)
         }
     }
 
     async clear() {
+        if(this.currentState().description){
+            console.log("Exit: " + this.currentState().description())
+        }
         if (this.currentState().exit) {
             await this.currentState().exit(this, this.bot)
         }
@@ -55,7 +63,7 @@ class StateMachine {
 
     async pop() {
         if(this.currentState().description){
-            console.log("Pop: " + this.currentState().description())
+            console.log("Exit: " + this.currentState().description())
         }
 
         if (this.currentState().exit) {
@@ -64,6 +72,9 @@ class StateMachine {
         this.stateStack.pop()
         if (!this.currentState()) {
             this.stateStack.push(new Idle())
+        }
+        if(this.currentState().description){
+            console.log("Enter: " + this.currentState().description())
         }
         if (this.currentState().resume) {
             await this.currentState().resume()

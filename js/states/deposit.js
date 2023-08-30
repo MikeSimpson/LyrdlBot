@@ -23,10 +23,10 @@ class Deposit {
             const chests = bot.findBlocks({
                 matching: ['chest', 'barrel'].map(name => bot.registry.blocksByName[name].id),
                 maxDistance: 6,
-                count: 4
+                count: 8
             })
 
-            for (const at of chests.slice(0, 4)) {
+            for (const at of chests.slice(0, 8)) {
                 const chest = bot.blockAt(at)
                 await putAll(bot, chest, this.extras.regex)
             }

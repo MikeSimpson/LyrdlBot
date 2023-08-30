@@ -171,4 +171,4 @@ const chatExamples = [
     }
 ]
 
-module.exports = { chatExamples };
+module.exports = { chatExamples }

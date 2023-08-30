@@ -1,12 +1,12 @@
-const { readMemory, move } = require('../util');
-const mineflayer = require('mineflayer');
-const pathfinder = require('mineflayer-pathfinder').pathfinder;
-const Vec3 = require('vec3').Vec3;
+const { readMemory, move } = require('../util')
+const mineflayer = require('mineflayer')
+const pathfinder = require('mineflayer-pathfinder').pathfinder
+const Vec3 = require('vec3').Vec3
 
 class Goto {
     
     constructor(extras) {
-        this.extras = extras;
+        this.extras = extras
     }
 
     description() {
@@ -25,9 +25,9 @@ class Goto {
     }
 
     async enter(stateMachine, bot) {
-        const waypoints = (await readMemory()).waypoints;
-        const waypointObject = waypoints[this.extras.waypoint];
-        const coordinates = this.extras.coordinates ?? {};
+        const waypoints = (await readMemory()).waypoints
+        const waypointObject = waypoints[this.extras.waypoint]
+        const coordinates = this.extras.coordinates ?? {}
         if (waypointObject) {
             if (waypointObject.dimension != bot.game.dimension) {
                 bot.chat("Whoa! That's in the " + waypointObject.dimension.replace("the_", "") + ", I'm in the " + bot.game.dimension.replace("the_", ""))
@@ -37,19 +37,17 @@ class Goto {
                 coordinates.z = waypointObject.z
             }
         }
-        console.log("Entered GoTo state with coords: " + coordinates.x + " " + coordinates.y + " " + coordinates.z);
 
         await move(bot, new Vec3(coordinates.x, coordinates.y, coordinates.z), 0)
     }
 
     async exit(stateMachine, bot) {
-        console.log("Exited GoTo state");
-        bot.pathfinder.stop();
+        bot.pathfinder.stop()
     }
 
     async movingFinished(stateMachine, bot) {
-        await stateMachine.pop();
+        await stateMachine.pop()
     }
 }
 
-module.exports = { Goto };
+module.exports = { Goto }

@@ -1,10 +1,10 @@
-const { takeAll } = require('../util');
-const Vec3 = require('vec3').Vec3;
+const { takeAll } = require('../util')
+const Vec3 = require('vec3').Vec3
 
 class Take {
 
     constructor(extras) {
-        this.extras = extras ?? this.extras;
+        this.extras = extras ?? this.extras
     }
 
     description() { return "take items from a chest" }
@@ -15,11 +15,10 @@ class Take {
     }
 
     async enter(stateMachine, bot) {
-        console.log("Entered Take");
         // take all items from nearest chest
         if (this.extras.position) {
             const chest = bot.blockAt(new Vec3(this.extras.position.x, this.extras.position.y, this.extras.position.z))
-            await takeAll(bot, chest, this.extras.regex);
+            await takeAll(bot, chest, this.extras.regex)
         } else {
             const chests = bot.findBlocks({
                 matching: ['chest', 'barrel'].map(name => bot.registry.blocksByName[name].id),
@@ -29,16 +28,12 @@ class Take {
 
             for (const at of chests.slice(0, 4)) {
                 const chest = bot.blockAt(at)
-                await takeAll(bot, chest, this.extras.regex);
+                await takeAll(bot, chest, this.extras.regex)
             }
         }
 
-        await stateMachine.pop();
-    }
-
-    async exit(stateMachine, bot) {
-        console.log("Exited Take state");
+        await stateMachine.pop()
     }
 }
 
-module.exports = { Take };
+module.exports = { Take }

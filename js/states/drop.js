@@ -1,9 +1,9 @@
-const { dropAll } = require('../util');
+const { dropAll } = require('../util')
 
 class Drop {
 
     constructor(extras) {
-        this.extras = extras ?? this.extras;
+        this.extras = extras ?? this.extras
     }
 
     description() { return "drop items" }
@@ -13,14 +13,9 @@ class Drop {
     }
 
     async enter(stateMachine, bot) {
-        console.log("Entered Drop");
-        await dropAll(bot, this.extras.regex);
-        await stateMachine.pop();
-    }
-
-    async exit(stateMachine, bot) {
-        console.log("Exited Dump state");
+        await dropAll(bot, this.extras.regex)
+        await stateMachine.pop()
     }
 }
 
-module.exports = { Drop };
+module.exports = { Drop }

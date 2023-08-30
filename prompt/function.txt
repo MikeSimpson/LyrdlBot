@@ -121,8 +121,8 @@ These are the available functions:
                         "type": "number",
                         "description": "The coordinate on the z axis"
                     }
-                },
-
+                }
+            },
             "cornerB": {
                 "type": "object",
                 "description": "The coordinates x y and z of the other corner of the square in which to dig",
@@ -141,6 +141,58 @@ These are the available functions:
                     }
                 }
             }
+        }
+    }
+},
+{
+    "name": "tunnel",
+    "description": "Make the robot dig horizontally in a square defined by the given pair of coordinates",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "cornerA": {
+                "type": "object",
+                "description": "The coordinates x y and z of the first corner of the square in which to dig",
+                "properties": {
+                    "x": {
+                        "type": "number",
+                        "description": "The coordinate on the x axis"
+                    },
+                    "y": {
+                        "type": "number",
+                        "description": "The coordinate on the y axis"
+                    },
+                    "z": {
+                        "type": "number",
+                        "description": "The coordinate on the z axis"
+                    }
+                }
+            },
+            "cornerB": {
+                "type": "object",
+                "description": "The coordinates x y and z of the other corner of the square in which to dig",
+                "properties": {
+                    "x": {
+                        "type": "number",
+                        "description": "The coordinate on the x axis"
+                    },
+                    "y": {
+                        "type": "number",
+                        "description": "The coordinate on the y axis"
+                    },
+                    "z": {
+                        "type": "number",
+                        "description": "The coordinate on the z axis"
+                    }
+                }
+            },
+            "directionPositive": {
+                "type":"bool",
+                "description": "Whether the robot should moving in the positive or negative direction"
+            },
+            "staircase": {
+                "type":"number",
+                "description": "The height of the step to put on a staircase, default to zero to dig flat"
             }
         }
     }

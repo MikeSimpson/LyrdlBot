@@ -1,14 +1,15 @@
-const mineflayer = require('mineflayer');
-const pathfinder = require('mineflayer-pathfinder').pathfinder;
-const Movements = require('mineflayer-pathfinder').Movements;
-const { GoalNear } = require('mineflayer-pathfinder').goals;
-const fileStream = require('fs');
+const mineflayer = require('mineflayer')
+const pathfinder = require('mineflayer-pathfinder').pathfinder
+const Movements = require('mineflayer-pathfinder').Movements
+const { GoalNear } = require('mineflayer-pathfinder').goals
+const fileStream = require('fs')
 
-async function move(bot, position, range) {
+async function move(bot, position, range, scaffold) {
     const defaultMove = new Movements(bot)
     defaultMove.canDig = false
     defaultMove.allow1by1towers = false
-    defaultMove.placeCost = 1000000
+    defaultMove.scafoldingBlocks.push(bot.registry.itemsByName['deepslate'].id)
+    defaultMove.placeCost = scaffold ? 1 : 1000000
     defaultMove.allowFreeMotion = true
 
     // Start following the target
@@ -94,18 +95,18 @@ async function dropAll(bot, regex) {
 
 // Prepend time stamp and write message to log file and console
 const log = (message) => {
-    let stampedMessage = `${new Date().toLocaleString("en-UK")}: ${message}\n`;
+    let stampedMessage = `${new Date().toLocaleString("en-UK")}: ${message}\n`
     fileStream.appendFile('logs.txt', stampedMessage, function (err) {
-        if (err) throw err;
-    });
-    console.log(stampedMessage);
+        if (err) throw err
+    })
+    console.log(stampedMessage)
 }
 
 // Read command line text and post it as a message in game
 const readline = require('readline').createInterface({
     input: process.stdin,
     output: process.stdout
-});
+})
 
 const prompt = (bot) => {
     readline.question('', msg => {
@@ -116,7 +117,7 @@ const prompt = (bot) => {
 
 async function readMemory() {
     const data = fileStream.readFileSync('memory.json', 'utf-8', callback_function = function (err) {
-        if (err) throw err;
+        if (err) throw err
     })
     const memory = JSON.parse(data)
     return memory
@@ -124,10 +125,10 @@ async function readMemory() {
 
 function updateMemory(update) {
     fileStream.readFile('memory.json', 'utf-8', callback_function = function (err, data) {
-        if (err) throw err;
+        if (err) throw err
         const memory = JSON.parse(data)
         fileStream.writeFile('memory.json', JSON.stringify(update(memory)), function (err) {
-            if (err) throw err;
+            if (err) throw err
         })
 
     })

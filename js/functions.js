@@ -17,6 +17,8 @@ const { Push } = require('./states/push')
 const { Dig } = require('./states/dig')
 const { Trench } = require('./states/trench')
 const { Tunnel } = require('./states/tunnel')
+const { Craft } = require('./states/craft')
+
 
 async function processFunction(command, stateMachine, bot) {
     let response = null
@@ -93,6 +95,10 @@ async function processFunction(command, stateMachine, bot) {
         case "dig":
             stateMachine.transition(new Dig(command.parameters))
             response = "Digging"
+            break
+        case "craft":
+            stateMachine.transition(new Craft(command.parameters))
+            response = "Crafting"
             break
         case "take":
             stateMachine.transition(new Take(command.parameters))

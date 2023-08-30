@@ -353,6 +353,19 @@ These are the available functions:
     }
 },
 {
+    "name": "craft",
+    "description": "Make the robot craft the given item",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "name": {
+                "type": "string",
+                "description": "The name of the item to craft"
+            }
+        }
+    }
+},
+{
     "name": "mission",
     "description": "Start a custom mission",
     "parameters": {

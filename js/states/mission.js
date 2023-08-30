@@ -9,6 +9,14 @@ const { Deposit } = require('./deposit')
 const { Take } = require('./take')
 const { Wait } = require('./wait')
 const { Goto } = require('./goto')
+const { Attack } = require('./attack')
+const { Guard } = require('./guard')
+const { Drop } = require('./drop')
+const { Push } = require('./push')
+const { Dig } = require('./dig')
+const { Trench } = require('./trench')
+const { Tunnel } = require('./tunnel')
+const { Craft } = require('./craft')
 
 class Mission {
 
@@ -63,6 +71,22 @@ class Mission {
                 return new Wait(extras)
             case "Goto":
                 return new Goto(extras)
+            case "Attack":
+                return new Attack(extras)
+            case "Guard":
+                return new Guard(extras)
+            case "Drop":
+                return new Drop(extras)
+            case "Push":
+                return new Push(extras)
+            case "Dig":
+                return new Dig(extras)
+            case "Trench":
+                return new Trench(extras)
+            case "Tunnel":
+                return new Tunnel(extras)
+            case "Craft":
+                return new Craft(extras)
         }
     }
 }
